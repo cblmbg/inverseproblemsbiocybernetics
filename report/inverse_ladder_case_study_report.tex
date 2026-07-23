@@ -1,0 +1,704 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{codeblue}{RGB}{32,80,130}
+\definecolor{codegray}{RGB}{245,246,248}
+\definecolor{coderule}{RGB}{210,214,220}
+
+\lstdefinestyle{matlabstyle}{
+  language=Matlab,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codeblue}\bfseries,
+  backgroundcolor=\color{codegray},
+  frame=single,
+  rulecolor=\color{coderule},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible
+}
+
+\newcommand{\vect}[1]{\boldsymbol{#1}}
+\newcommand{\R}{\mathbb{R}}
+
+\title{\textbf{A Four-Level Inverse-Problem Case Study}\\
+\large MATLAB implementation for a synthetic microbial consortium}
+\author{Technical implementation report accompanying the manuscript\\
+\emph{A Hierarchical Framework for Inverse Problems in Biological Cybernetics}}
+\date{23 July 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report documents a reproducible MATLAB case study illustrating four
+increasingly ambitious inverse problems in biological cybernetics:
+parameter estimation, model discovery, inverse optimal control, and inverse
+differential games. A common biological system is used throughout: two
+microbial strains that compete for a supplied substrate while reciprocally
+exchanging essential metabolites. The model has five dynamic states and two
+metabolic-allocation controls. Synthetic experiments are generated from known
+parameters and objectives, allowing the accuracy and limitations of each
+inverse step to be quantified.
+
+The six calibrated kinetic parameters are recovered with a root-mean-square
+(RMS) relative error of \(0.572\%\). Sparse model discovery obtains
+\(R^2=0.950\) and \(R^2=0.946\) for the two per-capita growth laws, while also
+revealing a structural ambiguity for the second strain. Inverse optimal control
+recovers a centralized community objective with Euclidean weight error
+\(1.57\times10^{-2}\). The inverse differential-game formulation recovers the
+two player-specific objectives with errors \(4.13\times10^{-2}\) and
+\(6.68\times10^{-3}\), and reproduces the equilibrium controls with RMS error
+\(1.02\times10^{-3}\). The complete workflow executes in approximately
+13 seconds on the development system, passes all four unit tests, and produces
+no MATLAB Code Analyzer findings.
+\end{abstract}
+
+\tableofcontents
+\clearpage
+
+\section{Purpose and scope}
+
+The manuscript proposes a hierarchy in which each inverse problem inherits the
+uncertainties of the levels below it and introduces a qualitatively new source
+of non-uniqueness. A useful case study should therefore do more than present
+four unrelated algorithms. It should hold the biological setting fixed while
+changing what is assumed known and what is inferred.
+
+The present implementation was designed around five requirements:
+\begin{enumerate}
+  \item use the same microbial system at all four levels;
+  \item keep the dynamics small enough for transparent mathematical analysis;
+  \item introduce explicit, biologically interpretable control variables for
+        Levels 3 and 4;
+  \item provide known ground truth through synthetic data; and
+  \item expose non-identifiability rather than forcing exact recovery.
+\end{enumerate}
+
+The result is a proof-of-concept, not a claim that objectives can already be
+reliably inferred from ordinary microbial abundance data. In particular,
+dynamic allocation measurements or appropriate molecular proxies would be
+needed before applying the upper levels to a real consortium.
+
+\section{Biological system and dynamic model}
+
+\subsection{Two-strain cross-feeding consortium}
+
+Two microbial strains \(X_1\) and \(X_2\) compete for a common substrate \(S\).
+Strain 1 secretes metabolite \(M_1\), which supports growth of strain 2, while
+strain 2 secretes metabolite \(M_2\), which supports growth of strain 1. The
+state is
+\begin{equation}
+  \vect{x}(t)=
+  \begin{bmatrix}
+    X_1(t) & X_2(t) & S(t) & M_1(t) & M_2(t)
+  \end{bmatrix}^{\mathsf T}.
+\end{equation}
+
+Each strain controls a metabolic allocation \(u_i(t)\in[0,1]\). Increasing
+\(u_i\) increases secretion of \(M_i\), but reduces the strain's instantaneous
+growth capacity. This construction creates a biologically interpretable
+trade-off between individual growth and support of the partner.
+
+\subsection{Growth and material-balance equations}
+
+For strain \(i\), let \(j=3-i\) denote its partner. The unburdened specific
+growth rate is
+\begin{equation}
+  \bar{\mu}_i(\vect{x}) =
+  \mu_{i,\max}
+  \frac{S}{K_{S,i}+S}
+  \frac{M_j}{K_{M,i}+M_j},
+\end{equation}
+and the allocation-dependent growth rate is
+\begin{equation}
+  \mu_i(\vect{x},u_i)=
+  \bar{\mu}_i(\vect{x})(1-c_i u_i).
+\end{equation}
+The implementation enforces a small positive lower bound on the allocation
+factor for numerical robustness. The complete dynamics are
+\begin{align}
+  \dot X_i &=
+  \left(\mu_i(\vect{x},u_i)-D\right)X_i, \label{eq:biomass}\\
+  \dot S &=
+  D(S_{\mathrm{in}}-S)
+  -\sum_{i=1}^{2}\frac{\mu_i(\vect{x},u_i)X_i}{Y_{S,i}},
+  \label{eq:substrate}\\
+  \dot M_1 &=
+  \alpha_1u_1X_1
+  -\frac{\mu_2(\vect{x},u_2)X_2}{Y_{M,2}}
+  -DM_1,\\
+  \dot M_2 &=
+  \alpha_2u_2X_2
+  -\frac{\mu_1(\vect{x},u_1)X_1}{Y_{M,1}}
+  -DM_2. \label{eq:metabolites}
+\end{align}
+
+Table~\ref{tab:parameters} lists the ground-truth parameters used to generate
+the synthetic data.
+
+\begin{table}[H]
+\centering
+\caption{Ground-truth parameters of the synthetic microbial consortium.}
+\label{tab:parameters}
+\begin{tabular}{lll}
+\toprule
+Quantity & Strain 1 & Strain 2\\
+\midrule
+Maximum growth rate, \(\mu_{i,\max}\) & 0.55 & 0.50\\
+Substrate half-saturation, \(K_{S,i}\) & 0.80 & 1.00\\
+Metabolite half-saturation, \(K_{M,i}\) & 0.12 & 0.10\\
+Allocation cost, \(c_i\) & 0.35 & 0.30\\
+Secretion rate, \(\alpha_i\) & 0.55 & 0.50\\
+Substrate yield, \(Y_{S,i}\) & 0.65 & 0.60\\
+Metabolite yield, \(Y_{M,i}\) & 8.0 & 8.0\\
+\midrule
+Dilution rate, \(D\) & \multicolumn{2}{c}{0.05}\\
+Inlet substrate, \(S_{\mathrm{in}}\) & \multicolumn{2}{c}{10.0}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Synthetic experiments and numerical implementation}
+
+\subsection{Calibration experiments}
+
+Three calibration experiments use different initial biomass ratios, substrate
+levels, and metabolite concentrations. The controls are persistently exciting
+square-wave schedules with small sinusoidal components. They span
+approximately \(0.08\) to \(0.82\), which is important for separating
+secretion-rate effects from allocation costs. States are sampled at 49 times
+over 24 time units and corrupted with independent Gaussian noise at
+\(0.5\%\) of the maximum state scale.
+
+\subsection{Two simulation modes}
+
+The MATLAB implementation contains two complementary integrators:
+\begin{itemize}
+  \item \texttt{simulateCommunity.m} uses \texttt{ode15s} with interpolated
+        controls and non-negativity constraints;
+  \item \texttt{simulateControlledModel.m} uses fixed-step fourth-order
+        Runge--Kutta integration for the repeated simulations required by
+        optimization.
+\end{itemize}
+
+The unit tests verify that the two simulators agree to an all-state RMS
+difference below \(2\times10^{-3}\) on a representative experiment.
+
+\subsection{Software entry point}
+
+The entire workflow is launched by
+\begin{lstlisting}[style=matlabstyle]
+results = runInverseLadderCaseStudy;
+\end{lstlisting}
+The command generates data, executes the four levels, performs forward
+validation, saves \texttt{inverse\_ladder\_results.mat}, and exports the
+summary graphics.
+
+\section{Level 1: parameter estimation}
+
+\subsection{Inverse problem}
+
+The model structure in equations~\eqref{eq:biomass}--\eqref{eq:metabolites}
+is assumed known. Six quantities are estimated:
+\begin{equation}
+  \vect{\theta} =
+  [\mu_{1,\max},\mu_{2,\max},\alpha_1,\alpha_2,c_1,c_2]^{\mathsf T}.
+\end{equation}
+All remaining parameters are treated as independently characterized. The
+weighted least-squares problem is
+\begin{equation}
+  \hat{\vect{\theta}} =
+  \arg\min_{\vect{\theta}_{\min}\le\vect{\theta}\le\vect{\theta}_{\max}}
+  \sum_{e,k,\ell}
+  \left[
+    \frac{x^{\mathrm{sim}}_{e,k,\ell}(\vect{\theta})
+          -x^{\mathrm{obs}}_{e,k,\ell}}
+         {s_{\ell}}
+  \right]^2,
+\end{equation}
+where \(e\), \(k\), and \(\ell\) index experiments, times, and states,
+respectively, and \(s_{\ell}\) is a state-specific scale.
+
+The problem is solved with \texttt{lsqnonlin} from two dispersed initial
+points. Bound constraints enforce biologically meaningful values.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Level 1 parameter-estimation results.}
+\label{tab:level1}
+\begin{tabular}{lrrr}
+\toprule
+Parameter & True & Estimated & Relative error (\%)\\
+\midrule
+\(\mu_{1,\max}\) & 0.55000 & 0.55080 &  0.145\\
+\(\mu_{2,\max}\) & 0.50000 & 0.49919 & -0.162\\
+\(\alpha_1\)     & 0.55000 & 0.54964 & -0.065\\
+\(\alpha_2\)     & 0.50000 & 0.50039 &  0.078\\
+\(c_1\)          & 0.35000 & 0.35175 &  0.501\\
+\(c_2\)          & 0.30000 & 0.29614 & -1.287\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The RMS relative error across all six parameters is \(0.572\%\).
+Figure~\ref{fig:level1} shows the observed and fitted trajectories for the
+first calibration experiment. The fitted model reproduces biomass, substrate,
+and metabolite dynamics while being driven by the measured allocation
+schedules.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/level1_calibration.png}
+\caption{Level 1 calibration for the first synthetic experiment. Circles are
+noisy observations; solid curves are predictions obtained with the estimated
+parameters. The bottom-right panel shows the externally prescribed allocation
+controls.}
+\label{fig:level1}
+\end{figure}
+
+\section{Level 2: model discovery}
+
+\subsection{Candidate library}
+
+The environmental balances are retained, while the per-capita biomass growth
+law is treated as unknown. For each strain, a sparse regression library is
+constructed from:
+\begin{equation}
+  \vect{\phi} =
+  \begin{bmatrix}
+  q_i &
+  q_i u_i &
+  X_1 &
+  X_2 &
+  S &
+  M_j &
+  u_i
+  \end{bmatrix},
+  \qquad
+  q_i =
+  \frac{S}{K_{S,i}+S}
+  \frac{M_j}{K_{M,i}+M_j}.
+\end{equation}
+
+Rather than differentiating noisy biomass measurements directly, the method
+uses window-integrated per-capita growth:
+\begin{equation}
+  \frac{\log X_i(t_b)-\log X_i(t_a)}{t_b-t_a}
+  \approx
+  \beta_{i,0}
+  + \frac{1}{t_b-t_a}
+    \int_{t_a}^{t_b}\vect{\phi}(t)^{\mathsf T}\vect{\beta}_i\,dt.
+\end{equation}
+Savitzky--Golay smoothing is applied before integration. LASSO selects a sparse
+coefficient vector using cross-validation.
+
+\subsection{Results and structural ambiguity}
+
+\begin{table}[H]
+\centering
+\caption{Level 2 sparse growth-law coefficients. Zeros denote terms removed
+by regularization.}
+\label{tab:level2}
+\begin{tabular}{lrr}
+\toprule
+Candidate term & Strain 1 & Strain 2\\
+\midrule
+Intercept & -0.0529 & -0.0252\\
+Monod cross-feeding, \(q_i\) & 0.5200 & 0.4157\\
+Allocation interaction, \(q_i u_i\) & -0.2090 & 0\\
+Strain 1 abundance & 0 & 0\\
+Strain 2 abundance & 0 & 0\\
+Substrate & 0 & 0\\
+Received metabolite & 0 & 0\\
+Direct allocation, \(u_i\) & 0 & -0.0496\\
+\midrule
+\(R^2\) & 0.9497 & 0.9458\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For strain 1, the discovered support agrees with the generating model:
+growth depends on \(q_1\) and the interaction \(q_1u_1\). For strain 2, the
+method selects a direct allocation term instead of \(q_2u_2\), despite
+achieving \(R^2=0.946\). This is not treated as a software failure. It is an
+example of structural indistinguishability caused by correlated candidate
+functions over the observed region of state-control space. A high predictive
+score does not guarantee recovery of the correct biological mechanism.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/inverse_ladder_summary.png}
+\caption{Summary of the four inverse levels. The Level 2 heat map displays the
+selected sparse coefficients, while the other panels compare ground-truth and
+estimated parameters or objective weights.}
+\label{fig:summary}
+\end{figure}
+
+\section{Level 3: inverse optimal control}
+
+\subsection{Centralized-planner hypothesis}
+
+At Level 3, the consortium is provisionally treated as a single decision
+maker choosing both allocation trajectories. This is a hypothesis to be
+tested, not an assertion of community-level selection. The finite-horizon
+objective is linear in four normalized kernels:
+\begin{equation}
+  J_C(\vect{u};\vect{w}) =
+  \sum_{m=1}^{4}w_m F_m(\vect{x},\vect{u}),
+  \qquad
+  \vect{w}\ge 0,\qquad
+  \vect{1}^{\mathsf T}\vect{w}=1.
+\end{equation}
+The kernels represent:
+\begin{enumerate}
+  \item negative total biomass, so minimization favors biomass production;
+  \item quadratic allocation effort;
+  \item residual substrate;
+  \item squared biomass imbalance \((X_1-X_2)^2\).
+\end{enumerate}
+
+The forward optimal-control problem uses piecewise-constant controls on eight
+intervals and fourth-order Runge--Kutta integration. It is solved with
+\texttt{fmincon} and box constraints \(0.02\le u_i\le0.95\).
+
+\subsection{Inverse stationarity formulation}
+
+Because the objective is linear in \(\vect{w}\), its control gradient at an
+observed optimum \(\vect{u}^{*}\) can be written
+\begin{equation}
+  \nabla_{\vect{u}}J_C(\vect{u}^{*};\vect{w})
+  =
+  \begin{bmatrix}
+    \nabla_{\vect{u}}F_1 &
+    \cdots &
+    \nabla_{\vect{u}}F_4
+  \end{bmatrix}
+  \vect{w}
+  = A_C\vect{w}.
+\end{equation}
+Finite differences provide the feature gradients. Rows associated with active
+control bounds are excluded when enough interior controls are available. The
+inverse problem is
+\begin{equation}
+  \hat{\vect{w}} =
+  \arg\min_{\vect{w}\ge0,\ \vect{1}^{\mathsf T}\vect{w}=1}
+  \|A_C\vect{w}\|_2^2
+  +\lambda\|\vect{w}-\vect{w}_0\|_2^2,
+\end{equation}
+with a very small regularization parameter
+\(\lambda=10^{-8}\) and uniform reference \(\vect{w}_0\).
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Level 3 centralized objective weights.}
+\label{tab:level3}
+\begin{tabular}{lrr}
+\toprule
+Objective kernel & True & Inferred\\
+\midrule
+Total biomass & 0.6200 & 0.6098\\
+Control effort & 0.1400 & 0.1391\\
+Residual substrate & 0.1400 & 0.1519\\
+Community imbalance & 0.1000 & 0.0991\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Euclidean weight error is \(1.57\times10^{-2}\). Forward solution using
+the inferred weights returns the same discretized controls and states to the
+reported numerical precision. The singular values of the stacked stationarity
+matrix are approximately
+\[
+  8.23\times10^{-1},\quad
+  2.31\times10^{-1},\quad
+  2.2\times10^{-3},\quad
+  \text{near zero}.
+\]
+The separation between the two smallest singular values is approximately
+641, supporting a well-defined one-dimensional near-null direction after
+normalization.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/level3_ioc.png}
+\caption{Level 3 results for the first experiment. The inferred objective
+reproduces the observed optimal controls and biomass trajectories. The
+bottom-right panel shows the singular-value spectrum of the inverse
+stationarity matrix.}
+\label{fig:level3}
+\end{figure}
+
+\section{Level 4: inverse differential game}
+
+\subsection{Player-specific objectives}
+
+The centralized hypothesis is replaced by two independent decision makers.
+Player \(i\) minimizes
+\begin{equation}
+  J_i(u_i,u_j;\vect{w}_i)
+  =
+  \sum_{m=1}^{4}w_{i,m}F_{i,m},
+  \qquad
+  \vect{w}_i\ge0,\qquad
+  \vect{1}^{\mathsf T}\vect{w}_i=1.
+\end{equation}
+The four kernels are:
+\begin{enumerate}
+  \item negative own biomass;
+  \item own quadratic allocation effort;
+  \item deficit of the metabolite received from the partner;
+  \item negative partner biomass.
+\end{enumerate}
+The final term permits a general-sum interaction: supporting the partner can
+be beneficial because the partner supplies an essential metabolite.
+
+An open-loop Nash equilibrium
+\((u_1^{*},u_2^{*})\) satisfies
+\begin{equation}
+  J_i(u_i^{*},u_j^{*})
+  \le
+  J_i(u_i,u_j^{*})
+  \quad
+  \text{for every feasible unilateral deviation }u_i.
+\end{equation}
+
+\subsection{Forward and inverse algorithms}
+
+The forward game is solved by damped iterative best response:
+\begin{enumerate}
+  \item fix \(u_2\) and optimize \(u_1\);
+  \item fix the updated \(u_1\) and optimize \(u_2\);
+  \item damp the updates and repeat;
+  \item verify that neither player obtains a material unilateral improvement.
+\end{enumerate}
+Each best response is an \texttt{fmincon} problem. The inverse problem is
+formed separately for each player by differentiating its four feature
+functionals with respect to its own control:
+\begin{equation}
+  \hat{\vect{w}}_i =
+  \arg\min_{\vect{w}_i\ge0,\
+             \vect{1}^{\mathsf T}\vect{w}_i=1}
+  \|A_i\vect{w}_i\|_2^2
+  +\lambda\|\vect{w}_i-\vect{w}_0\|_2^2.
+\end{equation}
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Level 4 player-specific objective weights.}
+\label{tab:level4}
+\begin{tabular}{lrrrr}
+\toprule
+& \multicolumn{2}{c}{Player 1} & \multicolumn{2}{c}{Player 2}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Objective kernel & True & Inferred & True & Inferred\\
+\midrule
+Own biomass & 0.5800 & 0.5679 & 0.6200 & 0.6148\\
+Control effort & 0.2200 & 0.2110 & 0.2500 & 0.2506\\
+Metabolite deficit & 0.0500 & 0.0856 & 0.0500 & 0.0541\\
+Partner biomass & 0.1500 & 0.1355 & 0.0800 & 0.0804\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Euclidean weight errors are \(4.13\times10^{-2}\) and
+\(6.68\times10^{-3}\) for Players 1 and 2. Forward validation gives:
+\begin{itemize}
+  \item mean control RMS error \(1.02\times10^{-3}\);
+  \item mean state RMS error \(9.32\times10^{-4}\);
+  \item maximum post-solution unilateral improvement below
+        \(7.4\times10^{-6}\).
+\end{itemize}
+The near-null-direction separation ratios are approximately 20.2 and 64.0 for
+the two players. Player 1 is less well-conditioned, consistent with its larger
+weight error, particularly for the received-metabolite term.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/level4_idg.png}
+\caption{Level 4 results for the first experiment. Dashed forward-validation
+controls and trajectories closely track the equilibrium data. The lower
+panels compare true and inferred objectives and show the two stationarity
+spectra.}
+\label{fig:level4}
+\end{figure}
+
+\section{Implementation map and verification}
+
+\begin{table}[H]
+\centering
+\caption{Principal MATLAB components.}
+\label{tab:software}
+\begin{tabularx}{\textwidth}{>{\ttfamily}l X}
+\toprule
+\normalfont File & Purpose\\
+\midrule
+runInverseLadderCaseStudy.m & Top-level reproducible workflow.\\
+defaultInverseLadderConfig.m & Parameters, experiments, objectives, and solver settings.\\
+communityRhs.m & Five-state controlled microbial ODE.\\
+simulateCommunity.m & Adaptive \texttt{ode15s} simulator.\\
+simulateControlledModel.m & Fixed-step RK4 simulator used in optimization.\\
+runLevel1ParameterEstimation.m & Bound-constrained multi-experiment calibration.\\
+runLevel2ModelDiscovery.m & Integrated sparse growth-law discovery.\\
+solveCommunityPlanner.m & Centralized forward optimal-control solver.\\
+runLevel3InverseOptimalControl.m & Level 3 inverse stationarity and validation.\\
+solveOpenLoopNash.m & Damped iterative best-response solver.\\
+runLevel4InverseDifferentialGame.m & Player-wise inverse stationarity and Nash validation.\\
+testInverseLadderCaseStudy.m & MATLAB unit tests.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The verified development environment is MATLAB R2026a Update 1 with
+Optimization Toolbox, Global Optimization Toolbox, Statistics and Machine
+Learning Toolbox, Signal Processing Toolbox, Symbolic Math Toolbox, Parallel
+Computing Toolbox, and Control System Toolbox. The current implementation uses
+the optimization, statistics, and signal-processing functionality directly.
+
+\begin{table}[H]
+\centering
+\caption{Verification summary.}
+\label{tab:verification}
+\begin{tabular}{lr}
+\toprule
+Check & Result\\
+\midrule
+Complete workflow runtime without plotting & approximately 13 s\\
+MATLAB unit tests & 4 of 4 passed\\
+MATLAB Code Analyzer findings & 0\\
+Saved numerical result file & verified\\
+Saved summary figure & verified\\
+Nash unilateral-improvement check & \(<7.4\times10^{-6}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Interpretation and limitations}
+
+\subsection{What the case study demonstrates}
+
+The case study provides a computationally coherent realization of the inverse
+ladder:
+\begin{itemize}
+  \item Level 1 recovers continuous kinetic parameters when the structure and
+        controls are known.
+  \item Level 2 admits competing structural explanations even when prediction
+        is accurate.
+  \item Level 3 recovers an objective only after choosing candidate kernels,
+        normalizing their scale, and assuming centralized optimality.
+  \item Level 4 requires an equilibrium concept, player-specific actions, and
+        separate stationarity conditions.
+\end{itemize}
+
+The increasing data and modeling requirements are visible in the code. Levels
+1 and 2 use ordinary time-series observations and prescribed inputs. Levels 3
+and 4 additionally require controls, a candidate objective basis, and a
+forward optimal-control or game solver.
+
+\subsection{Important limitations}
+
+\begin{enumerate}
+  \item \textbf{Synthetic ground truth.} The trajectories, objectives, and
+        controls are generated by the same model class used for inference.
+        This is appropriate for verification but does not establish biological
+        validity.
+  \item \textbf{Observed controls.} Real microbial studies rarely measure
+        metabolic allocations directly. Transcript, protein, or secretion
+        measurements would be required as proxies.
+  \item \textbf{Objective basis dependence.} Objective recovery is conditional
+        on the selected feature library. An omitted kernel can redistribute
+        inferred weights without visibly degrading the fit.
+  \item \textbf{Open-loop equilibrium.} Level 4 infers finite-horizon open-loop
+        strategies. General nonlinear feedback Nash equilibria would require
+        solving coupled Hamilton--Jacobi equations and are not attempted.
+  \item \textbf{Two-player scale.} The best-response and finite-difference
+        methods are suitable for a compact illustration, not yet for large
+        microbial communities.
+  \item \textbf{Local optimality information.} Inverse stationarity establishes
+        compatibility with first-order conditions. Forward re-optimization and
+        unilateral-deviation tests are therefore essential.
+\end{enumerate}
+
+\section{Recommended extensions}
+
+The most informative next developments are:
+\begin{enumerate}
+  \item design additional asymmetric perturbations specifically to resolve
+        the Level 2 allocation ambiguity;
+  \item add measurement noise to the Level 3 and Level 4 controls and quantify
+        confidence regions for the inferred weights;
+  \item compare the centralized and game formulations on the same behavior to
+        demonstrate cooperative mimicry explicitly;
+  \item replace synthetic allocations with gene-expression or metabolite-flux
+        measurements from an engineered two-strain consortium;
+  \item add profile-based or Bayesian uncertainty quantification for objective
+        weights;
+  \item test whether inferred objectives predict behavior under dilution,
+        nutrient, or partner-knockdown conditions excluded from inference.
+\end{enumerate}
+
+\section{Conclusions}
+
+The MATLAB implementation shows that all four levels can be represented in a
+single biological and computational framework. Parameter estimation and sparse
+model discovery are inexpensive and mature enough for routine application.
+Inverse optimal control is feasible for a small controlled community when
+allocation trajectories are available. A two-player inverse differential game
+is also computationally feasible under open-loop, finite-horizon assumptions,
+but it introduces a substantially larger modeling commitment and more severe
+conditioning issues.
+
+The central lesson is not that the upper levels produce uniquely correct
+biological objectives. Rather, the implementation demonstrates how to formulate
+those hypotheses, diagnose their identifiability, and test their predictive
+consequences. The Level 2 structural ambiguity and the Level 4 conditioning
+difference between players are therefore substantive results: they make the
+case study consistent with the manuscript's emphasis on both opportunities and
+limitations.
+
+\begin{thebibliography}{9}
+
+\bibitem{BangaVillaverde2026}
+J. R. Banga and A. F. Villaverde,
+\emph{A Hierarchical Framework for Inverse Problems in Biological
+Cybernetics: Opportunities and Limitations},
+manuscript, 2026.
+
+\bibitem{BruntonKutz2022}
+S. L. Brunton and J. N. Kutz,
+\emph{Data-Driven Science and Engineering: Machine Learning, Dynamical
+Systems, and Control},
+Cambridge University Press, 2022.
+
+\bibitem{Molloy2022}
+T. L. Molloy, J. Inga, S. Hohmann, and T. Perez,
+\emph{Inverse Optimal Control and Inverse Noncooperative Dynamic Game Theory},
+Springer, 2022.
+
+\bibitem{Zomorrodi2012}
+A. R. Zomorrodi and C. D. Maranas,
+``OptCom: A multi-level optimization framework for the metabolic modeling and
+analysis of microbial communities,''
+\emph{PLoS Computational Biology}, vol. 8, no. 2, e1002363, 2012.
+
+\end{thebibliography}
+
+\end{document}

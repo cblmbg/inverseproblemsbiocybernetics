@@ -1,0 +1,19 @@
+# MATLAB editor and autosave files
+*.asv
+*.m~
+
+# LaTeX build intermediates
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Rendered page images used only for visual verification
+report/tmp/
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
