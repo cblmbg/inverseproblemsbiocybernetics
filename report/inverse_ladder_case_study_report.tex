@@ -661,7 +661,8 @@ for each synthetic experiment e
     retain stationarity rows for interior controls and stack into A_C
 w_hat <- inferSimplexWeights(A_C, lambda)
 for each experiment e
-    validation_e <- solveCommunityPlanner(model, x0_e, w_hat)
+    validation_e <- solveCommunityPlanner(model, x0_e, w_hat,
+                                           initial controls = 0.35)
 Output: inferred weights and control/state validation errors
 \end{lstlisting}
 \end{minipage}
@@ -675,7 +676,13 @@ compatibility with local first-order conditions. Stationarity alone does not
 exclude a saddle point, a local maximum, or a non-global local minimum, and it
 does not jointly reconstruct unknown controls or kinetic parameters. Forward
 re-optimization is therefore an essential validation step, but does not turn
-the inverse calculation into a bilevel method.
+the inverse calculation into a bilevel method. To make this check independent
+of the demonstrated solution, every validation solve is cold-started from the
+uniform default \(u_1=u_2=0.35\) on all control intervals. The observed
+controls are deliberately not supplied as the initial guess: doing so would
+start \texttt{fmincon} essentially at the answer and could produce zero
+trajectory error after a single iteration, which is only a warm-start
+consistency check.
 
 \subsection{Results}
 
@@ -695,17 +702,35 @@ Community imbalance & 0.1000 & 0.0991\\
 \end{tabular}
 \end{table}
 
-The Euclidean weight error is \(1.57\times10^{-2}\). Forward solution using
-the inferred weights returns the same discretized controls and states to the
-reported numerical precision.
+The Euclidean weight error is \(1.57\times10^{-2}\). Both cold-started forward
+solves converged with a positive \texttt{fmincon} exit flag and closely
+reproduced the demonstrations, but not identically; Table~\ref{tab:level3-validation}
+reports the resulting nonzero discrepancies.
+
+\begin{table}[H]
+\centering
+\caption{Level 3 cold-start forward validation. RMSE values compare the
+re-optimized trajectories obtained with the inferred weights against the
+synthetic demonstrations.}
+\label{tab:level3-validation}
+\begin{tabular}{lrrr}
+\toprule
+Experiment & Iterations & Control RMSE & State RMSE\\
+\midrule
+1 & 46 & \(4.491\times10^{-5}\) & \(5.182\times10^{-5}\)\\
+2 & 44 & \(1.326\times10^{-5}\) & \(1.955\times10^{-5}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.78\textwidth]{figures/level3_ioc.png}
-\caption{Level 3 results for the first experiment. The inferred objective
-reproduces the observed optimal controls and biomass trajectories. The
-bottom-right panel shows the singular-value spectrum of the inverse
-stationarity matrix.}
+\includegraphics[width=0.55\textwidth]{figures/level3_ioc.png}
+\caption{Level 3 results for the first experiment. Starting from the uniform
+default allocation \(u_1=u_2=0.35\), the forward solve with the inferred
+objective closely reproduces the observed optimal controls and biomass
+trajectories. The bottom-right panel shows the singular-value spectrum of the
+inverse stationarity matrix.}
 \label{fig:level3}
 \end{figure}
 
@@ -880,7 +905,7 @@ the optimization, statistics, and signal-processing functionality directly.
 \toprule
 Check & Result\\
 \midrule
-Complete workflow runtime without plotting & approximately 13 s\\
+Complete workflow runtime without plotting & approximately 14 s\\
 MATLAB unit tests & 4 of 4 passed\\
 MATLAB Code Analyzer findings & 0\\
 Saved numerical result file & verified\\

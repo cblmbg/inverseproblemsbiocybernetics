@@ -36,9 +36,11 @@ stateError = zeros(numberOfExperiments, 1);
 
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
+    % Cold-start validation from the configured default guess. Reusing the
+    % demonstrated controls here would make trajectory reproduction a
+    % warm-start consistency check rather than an independent forward solve.
     validation{experimentIndex} = solveCommunityPlanner(parameters, ...
-        initialState, timeGrid, inverseResult.weights, cfg, ...
-        observations{experimentIndex}.controls);
+        initialState, timeGrid, inverseResult.weights, cfg);
     controlError(experimentIndex) = rms( ...
         validation{experimentIndex}.controls - ...
         observations{experimentIndex}.controls, "all");
