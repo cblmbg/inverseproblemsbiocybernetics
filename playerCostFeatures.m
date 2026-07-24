@@ -22,6 +22,7 @@ producedMetabolite = intervalStates(:, producedMetaboliteColumn);
 
 biomassScale = 2.0;
 receivedTarget = 0.35;
+producedMetaboliteRegularization = 1e-5;
 features = zeros(4, 1);
 features(1) = -sum(intervalLengths .* ownBiomass) / duration / biomassScale;
 features(2) = sum(intervalLengths .* controls(:, player).^2) / duration;
@@ -30,7 +31,7 @@ features(3) = sum(intervalLengths .* ...
 features(4) = -sum(intervalLengths .* partnerBiomass) / duration / biomassScale;
 
 % A tiny smooth term removes flat directions when produced metabolite is
-% very high without materially changing the interpretation of the kernels.
-features(2) = features(2) + 1e-5 * ...
+% very high. It is part of the regularized allocation-effort kernel.
+features(2) = features(2) + producedMetaboliteRegularization * ...
     sum(intervalLengths .* producedMetabolite.^2) / duration;
 end

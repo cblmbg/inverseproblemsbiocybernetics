@@ -157,7 +157,7 @@ bar([results.level4.trueWeights(:, 1), ...
     results.level4.trueWeights(:, 2), ...
     results.level4.inferredWeights(:, 2)]);
 xticks(1:4);
-xticklabels(["Own biomass", "Control", "Metabolite", "Partner"]);
+xticklabels(["Own biomass", "Reg. effort", "Metabolite", "Partner"]);
 xtickangle(20);
 ylabel("Normalized weight");
 grid on;

@@ -7,10 +7,9 @@ shared substrate and reciprocally exchanges essential metabolites.
 
 ## Requirements
 
-The implementation was developed for MATLAB R2026a and uses:
+The implementation was developed for MATLAB R2026a and directly requires:
 
 - Optimization Toolbox
-- Global Optimization Toolbox
 - Statistics and Machine Learning Toolbox
 - Signal Processing Toolbox
 

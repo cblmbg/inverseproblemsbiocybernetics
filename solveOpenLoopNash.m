@@ -19,7 +19,7 @@ options = optimoptions("fmincon", ...
     "OptimalityTolerance", 2e-6, ...
     "StepTolerance", 1e-8);
 
-converged = false;
+bestResponseToleranceSatisfied = false;
 bestResponseGap = inf;
 for iteration = 1:cfg.level4.maximumBestResponseIterations
     previousControls = controls;
@@ -33,7 +33,7 @@ for iteration = 1:cfg.level4.maximumBestResponseIterations
 
     bestResponseGap = norm(controls - previousControls, inf);
     if bestResponseGap < cfg.level4.bestResponseTolerance
-        converged = true;
+        bestResponseToleranceSatisfied = true;
         break
     end
 end
@@ -55,7 +55,10 @@ for player = 1:2
     unilateralImprovement(player) = max(0, ...
         playerObjectives(player) - bestResponseValue);
 end
-converged = converged || max(unilateralImprovement) < 1e-4;
+unilateralImprovementToleranceSatisfied = max(unilateralImprovement) < ...
+    cfg.level4.unilateralImprovementTolerance;
+converged = bestResponseToleranceSatisfied || ...
+    unilateralImprovementToleranceSatisfied;
 
 solution.controls = controls;
 solution.states = states;
@@ -64,7 +67,10 @@ solution.objectiveValues = playerObjectives;
 solution.converged = converged;
 solution.iterations = iteration;
 solution.bestResponseGap = bestResponseGap;
+solution.bestResponseToleranceSatisfied = bestResponseToleranceSatisfied;
 solution.unilateralImprovement = unilateralImprovement;
+solution.unilateralImprovementToleranceSatisfied = ...
+    unilateralImprovementToleranceSatisfied;
 
     function value = playerObjective(candidatePlayerControl)
         candidateControls = opponentControls;
