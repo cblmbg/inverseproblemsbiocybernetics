@@ -5,11 +5,10 @@ function result = runLevel1ParameterEstimation(cfg, experiments)
 % rates, and two allocation-cost coefficients. Remaining parameters are
 % treated as independently known.
 
-trueVector = packParameters(cfg.trueParameters);
 lowerBounds = [0.20; 0.20; 0.20; 0.20; 0.05; 0.05];
 upperBounds = [0.90; 0.90; 0.90; 0.90; 0.70; 0.70];
-initialVector = trueVector .* [1.20; 0.82; 0.78; 1.18; 1.25; 0.75];
-initialVector = min(max(initialVector, lowerBounds), upperBounds);
+% Use a reproducible initialization that does not depend on ground truth.
+initialVector = 0.5 * (lowerBounds + upperBounds);
 
 stateScale = zeros(1, 5);
 for experimentIndex = 1:numel(experiments)
@@ -34,7 +33,7 @@ for startIndex = 1:cfg.calibration.numberOfStarts
     if startIndex == 1
         startVector = initialVector;
     else
-        fraction = rand(size(trueVector));
+        fraction = rand(size(lowerBounds));
         startVector = lowerBounds + fraction .* (upperBounds - lowerBounds);
     end
     [candidateVector, residualNorm, ~, candidateExitFlag, candidateOutput] = ...
@@ -56,6 +55,7 @@ for experimentIndex = 1:numel(experiments)
         experiment.controls(1:end-1, :), 4);
 end
 
+trueVector = packParameters(cfg.trueParameters);
 result.estimatedParameters = estimatedParameters;
 result.estimatedVector = bestVector;
 result.trueVector = trueVector;

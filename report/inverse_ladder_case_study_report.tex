@@ -292,8 +292,10 @@ interpretation, the externally applied actuator signals are converted through
 the assumed calibrated input map into the effective allocations \(u_1(t)\)
 and \(u_2(t)\). These known inputs are persistently exciting square-wave
 schedules with small sinusoidal components and are imposed independently of
-the observed state trajectories. They span approximately \(0.08\) to \(0.82\).
-This variation is important because \(u_i\) affects both secretion through
+the observed state trajectories. Across the three experiments, the realized
+ranges are \(u_1\in[0.130,0.730]\) and \(u_2\in[0.150,0.730]\). The safety
+clamp \([0.08,0.82]\) in the data generator is never active. This realized
+variation is important because \(u_i\) affects both secretion through
 \(\alpha_i u_iX_i\) and the growth burden through \(c_i u_i\); varying it
 helps separate the secretion coefficients \(\alpha_i\) from the allocation
 costs \(c_i\). States are sampled at 49 times over 24 time units and corrupted
@@ -378,8 +380,12 @@ schedules nor changes them to improve the fit, and Level 1 makes no claim
 that they are optimal choices made by the microorganisms. This distinction
 is what is meant by ``externally prescribed'' in Figure~\ref{fig:level1}.
 
-The problem is solved with \texttt{lsqnonlin} from two dispersed initial
-points. Bound constraints enforce biologically meaningful values.
+The problem is solved with \texttt{lsqnonlin} from two truth-independent
+initial points: the midpoint of the parameter bounds and a seed-controlled
+uniform random draw within those bounds. Thus, the synthetic ground-truth
+vector is not used to initialize the optimizer; it is accessed only after
+estimation to quantify recovery error. Bound constraints enforce biologically
+meaningful values.
 
 \noindent\begin{minipage}{\linewidth}
 \begin{lstlisting}[style=pseudostyle,title={Compact MATLAB pseudocode}]
