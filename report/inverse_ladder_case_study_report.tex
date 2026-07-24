@@ -3,6 +3,8 @@
 \usepackage[margin=2.4cm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shadows.blur}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{tabularx}
@@ -106,6 +108,26 @@ The result is a proof-of-concept, not a claim that objectives can already be
 reliably inferred from ordinary microbial abundance data. In particular,
 dynamic allocation measurements or appropriate molecular proxies would be
 needed before applying the upper levels to a real consortium.
+
+Figure~\ref{fig:inverse-ladder-overview} summarizes how the same microbial
+plant supports four progressively more explanatory inverse questions, while
+also making explicit the change in the epistemic status of the allocation
+variables between the lower and upper levels.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+  \input{figures/inverse_ladder_overview.tikz.tex}%
+}
+\caption{The four-level inverse ladder for the two-strain cross-feeding case
+study. Levels 1 and 2 use known, externally actuated allocations to identify
+parameters and dynamic structure. Levels 3 and 4 instead treat observed
+allocations as endogenous behavior to be explained by, respectively, a
+community objective or strain-specific objectives. The biological plant and
+state equations remain fixed, but explanatory depth, assumptions, and the
+kind of non-uniqueness increase up the ladder.}
+\label{fig:inverse-ladder-overview}
+\end{figure}
 
 \section{Biological system and dynamic model}
 
