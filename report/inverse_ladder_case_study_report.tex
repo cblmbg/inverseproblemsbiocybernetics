@@ -894,6 +894,14 @@ its four feature functionals with respect to its own control:
   +\lambda\|\vect{w}_i-\vect{w}_0\|_2^2.
 \end{equation}
 
+As at Level 3, the post-inference forward validation is deliberately
+cold-started from the uniform configured guess \(u_1=u_2=0.35\) on every
+control interval. The demonstrated controls are not supplied to the solver as
+an initial guess. Consequently, the validation tests whether damped best
+response can reconstruct a nearby Nash trajectory from a truth-independent
+initialization, rather than merely taking one local sweep from the trajectory
+being validated.
+
 \noindent\begin{minipage}{\linewidth}
 \begin{lstlisting}[style=pseudostyle,title={Compact MATLAB pseudocode}]
 Input: model, initial states, candidate features for each player
@@ -904,7 +912,9 @@ for each of 2 synthetic experiments e
         retain interior-control rows and stack into A_i
 for each player i
     w_hat_i <- inferSimplexWeights(A_i, lambda)
-validation <- solveOpenLoopNash(model, initial states, w_hat)
+for each experiment e
+    validation_e <- solveOpenLoopNash(model, x0_e, w_hat,
+                                      initial controls = 0.35)
 verify control/state errors and unilateral-improvement gaps
 Output: player-specific weights and Nash validation diagnostics
 \end{lstlisting}
@@ -931,13 +941,36 @@ Partner biomass & 0.1500 & 0.1465 & 0.0800 & 0.0803\\
 \end{table}
 
 The Euclidean weight errors are \(1.00\times10^{-2}\) and
-\(1.07\times10^{-3}\) for Players 1 and 2. Forward validation gives:
-\begin{itemize}
-  \item mean control RMS error \(2.28\times10^{-4}\);
-  \item mean state RMS error \(1.81\times10^{-4}\);
-  \item maximum post-solution unilateral improvement below
-        \(4.4\times10^{-7}\).
-\end{itemize}
+\(1.07\times10^{-3}\) for Players 1 and 2. Both cold-started validation
+solves satisfy the primary control-change tolerance after 16 best-response
+iterations and also pass the unilateral-deviation check
+(Table~\ref{tab:level4-validation}).
+
+\begin{table}[H]
+\centering
+\small
+\caption{Level 4 cold-start forward validation. RMSE values compare the
+recomputed Nash trajectories obtained with the inferred player weights
+against the synthetic demonstrations.}
+\label{tab:level4-validation}
+\begin{tabular}{rrrrrr}
+\toprule
+Experiment & Iterations & Control RMSE & State RMSE &
+Best-response gap & Max.\ improvement\\
+\midrule
+1 & 16 & \(1.564\times10^{-3}\) & \(2.509\times10^{-3}\) &
+\(2.168\times10^{-3}\) & \(3.03\times10^{-7}\)\\
+2 & 16 & \(1.165\times10^{-3}\) & \(2.220\times10^{-3}\) &
+\(2.476\times10^{-3}\) & \(4.33\times10^{-7}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mean control and state RMS errors are \(1.365\times10^{-3}\) and
+\(2.364\times10^{-3}\), respectively. These nonzero discrepancies are larger
+than their warm-start counterparts but remain small on the allocation and
+state scales of the case study.
+
 The near-null-direction separation ratios are approximately 69.9 and 296 for
 the two players. Player 1 remains less well-conditioned, consistent with its
 larger weight error, particularly for the received-metabolite term.
@@ -945,8 +978,9 @@ larger weight error, particularly for the received-metabolite term.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/level4_idg.png}
-\caption{Level 4 results for the first experiment. Dashed forward-validation
-controls and trajectories closely track the equilibrium data. The lower
+\caption{Level 4 results for the first experiment. Dashed cold-start
+forward-validation controls and trajectories, recomputed from the uniform
+initial guess \(u_1=u_2=0.35\), closely track the equilibrium data. The lower
 panels compare true and inferred objectives and show the two stationarity
 spectra.}
 \label{fig:level4}
@@ -992,13 +1026,14 @@ the optimization, statistics, and signal-processing functionality directly.
 \toprule
 Check & Result\\
 \midrule
-Complete workflow runtime without plotting & approximately 15 s\\
+Complete workflow runtime without plotting & approximately 25 s\\
 MATLAB unit tests & 4 of 4 passed\\
 MATLAB Code Analyzer findings & 0\\
 Saved numerical result file & verified\\
 Saved summary figure & verified\\
 Nash demonstration iterations & 16 of 20 (both experiments)\\
-Nash best-response gaps & \(\le 2.49\times10^{-3}\)\\
+Nash cold-start validation iterations & 16 of 20 (both experiments)\\
+Nash demonstration/validation gaps & \(\le 2.49\times10^{-3}\)\\
 Nash unilateral-improvement check & \(<4.4\times10^{-7}\)\\
 \bottomrule
 \end{tabular}

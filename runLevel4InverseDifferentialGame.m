@@ -47,8 +47,11 @@ controlError = zeros(numberOfExperiments, 1);
 stateError = zeros(numberOfExperiments, 1);
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
+    % Cold-start validation from the configured default guess. Reusing the
+    % demonstrated controls here would reduce the check to a local
+    % warm-start consistency sweep rather than an independent Nash solve.
     validation{experimentIndex} = solveOpenLoopNash(parameters, initialState, ...
-        timeGrid, inferredWeights, cfg, observations{experimentIndex}.controls);
+        timeGrid, inferredWeights, cfg);
     controlError(experimentIndex) = rms( ...
         validation{experimentIndex}.controls - ...
         observations{experimentIndex}.controls, "all");
