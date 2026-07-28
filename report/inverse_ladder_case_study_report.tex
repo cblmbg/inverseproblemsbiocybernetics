@@ -15,6 +15,7 @@
 \usepackage{listings}
 \usepackage[hidelinks]{hyperref}
 
+
 \definecolor{codeblue}{RGB}{32,80,130}
 \definecolor{codegray}{RGB}{245,246,248}
 \definecolor{coderule}{RGB}{210,214,220}
@@ -47,10 +48,21 @@
 \newcommand{\vect}[1]{\boldsymbol{#1}}
 \newcommand{\R}{\mathbb{R}}
 
-\title{\textbf{A Four-Level Inverse-Problem Case Study}\\
-\large MATLAB implementation for a synthetic microbial consortium}
-\author{Technical implementation report accompanying the manuscript\\
-\emph{A Hierarchical Framework for Inverse Problems in Biological Cybernetics}}
+\title{\textbf{A Four-Level Inverse-Problem Case Study: A Synthetic Microbial Consortium}}
+
+\author{
+Julio R. Banga\\
+Computational Biology Lab, MBG-CSIC, Pontevedra, Spain\\
+\texttt{j.r.banga@csic.es}
+\and
+Alejandro F. Villaverde\\
+Department of Systems Engineering and Control, Universidade de Vigo\\
+36310 Vigo, Galicia, Spain\\
+CITMAga, Galician Centre for Mathematical Research and Technology\\
+15782 Santiago de Compostela, Galicia, Spain\\
+\texttt{afvillaverde@uvigo.gal}
+}
+
 \date{23 July 2026}
 
 \begin{document}
@@ -58,8 +70,7 @@
 \maketitle
 
 \begin{abstract}
-This report presents a reproducible MATLAB case study that turns the inverse
-ladder into a single biological example. We consider two microbial strains that
+This report presents a reproducible case study, implemented in MATLAB, that illustrates the ladder of inverse problems using a single biological example. We consider two microbial strains that
 compete for a supplied substrate while exchanging metabolites, and ask four
 progressively deeper questions: which kinetic parameters govern their dynamics,
 which growth law can be discovered from observations, whether their behavior
@@ -77,8 +88,8 @@ within the simulated setting. The case study therefore illustrates the central
 message of the inverse ladder: moving upward changes the goal from estimating
 numerical coefficients to inferring mechanisms and behavioral explanations,
 but it also requires stronger assumptions and introduces new forms of
-non-uniqueness. The implementation is intended as a transparent proof of
-concept and as a basis for studying identifiability, experimental design, and
+non-uniqueness. The implementation is intended as a simplified and transparent proof of
+concept, and as a basis for studying identifiability, experimental design, and
 robustness before applying these ideas to real microbial communities.
 \end{abstract}
 
@@ -87,17 +98,17 @@ robustness before applying these ideas to real microbial communities.
 
 \section{Purpose and scope}
 
-The accompanying manuscript \cite{BangaVillaverde2026} proposes a hierarchy in
+In the accompanying manuscript \cite{BangaVillaverde2026} we propose a hierarchy in
 which each inverse problem inherits the uncertainties of the levels below it
 and introduces a qualitatively new source of non-uniqueness. A useful case
 study should therefore do more than present four unrelated algorithms. It
 should hold the biological setting fixed while changing what is assumed known
 and what is inferred.
 
-The present implementation was designed around five requirements:
+Our case study in inspired in previous works considering the modeling of microbial communities \cite{Zomorrodi2012,Mauri2020}. The present implementation was designed around five requirements:
 \begin{enumerate}
   \item use the same microbial system at all four levels;
-  \item keep the dynamics small enough for transparent mathematical analysis;
+  \item keep the dynamics simple enough for transparent mathematical analysis;
   \item introduce explicit, biologically interpretable control variables for
         Levels 3 and 4;
   \item provide known ground truth through synthetic data; and
@@ -110,7 +121,7 @@ dynamic allocation measurements or appropriate molecular proxies would be
 needed before applying the upper levels to a real consortium.
 
 Figure~\ref{fig:inverse-ladder-overview} summarizes how the same microbial
-plant supports four progressively more explanatory inverse questions, while
+model supports four progressively more explanatory inverse questions, while
 also making explicit the change in the epistemic status of the allocation
 variables between the lower and upper levels.
 
@@ -123,7 +134,7 @@ variables between the lower and upper levels.
 study. Levels 1 and 2 use known, externally actuated allocations to identify
 parameters and dynamic structure. Levels 3 and 4 instead treat observed
 allocations as endogenous behavior to be explained by, respectively, a
-community objective or strain-specific objectives. The biological plant and
+community objective or strain-specific objectives. The biological system and
 state equations remain fixed, but explanatory depth, assumptions, and the
 kind of non-uniqueness increase up the ladder.}
 \label{fig:inverse-ladder-overview}
@@ -179,7 +190,7 @@ identify the dynamics. In Level 3 it becomes an observed endogenous
 trajectory hypothesized to solve a centralized optimal-control problem. In
 Level 4, \(u_i\) is instead the endogenous strategy of strain \(i\) in a
 differential game. The four levels therefore share the same biological
-plant and state equations, but the upper levels use separately generated
+system and state equations, but the upper levels use separately generated
 control trajectories and ask a different question about their origin.
 Applying inverse optimal control or an inverse game directly to an externally
 imposed \(u_i(t)\) could at most explain the experimenter's actuation policy;
@@ -253,7 +264,7 @@ Inlet substrate, \(S_{\mathrm{in}}\) & \multicolumn{2}{c}{10.0} &
 External actuation of \(u_i\) is a useful experimental-design choice for the
 lower levels, but it is neither a logical requirement nor a guarantee of
 identifiability. What is essential is that the observed trajectories contain
-enough independent information about the unknown quantities. For Level 1,
+enough independent information about the unknown quantities. \textbf{***Alex, engade/cambia eiqui o que consideres***} For Level 1,
 local practical identifiability is related to the rank and conditioning of
 the stacked parameter-sensitivity matrix
 \begin{equation}
@@ -282,7 +293,7 @@ If allocation is generated by feedback,
 \end{equation}
 the observations explore the closed-loop trajectories produced jointly by
 the biological dynamics and the policy \(\pi_i\). Different combinations of
-plant dynamics and feedback can then agree on the observed trajectories.
+biological dynamics and feedback can then agree on the observed trajectories.
 Moreover, process disturbances or unmeasured physiological variables may
 correlate \(u_i\) with the equation error, so treating it as an ordinary
 error-free input can bias parameter estimates or favor an incorrect model
@@ -308,15 +319,15 @@ are fundamentally unusable.
 
 \subsection{Calibration experiments}
 
-Three calibration experiments use different initial biomass ratios, substrate
+We consider three calibration experiments with different initial biomass ratios, substrate
 levels, and metabolite concentrations. For the synthetic engineered-consortium
 interpretation, the externally applied actuator signals are converted through
 the assumed calibrated input map into the effective allocations \(u_1(t)\)
 and \(u_2(t)\). These known inputs are persistently exciting square-wave
 schedules with small sinusoidal components and are imposed independently of
 the observed state trajectories. Across the three experiments, the realized
-ranges are \(u_1\in[0.130,0.730]\) and \(u_2\in[0.150,0.730]\). The safety
-clamp \([0.08,0.82]\) in the data generator is never active. This realized
+ranges are \(u_1\in[0.130,0.730]\) and \(u_2\in[0.150,0.730]\). %The safety clamp \([0.08,0.82]\) in the data generator is never active.
+This realized
 variation is important because \(u_i\) affects both secretion through
 \(\alpha_i u_iX_i\) and the growth burden through \(c_i u_i\); varying it
 helps separate the secretion coefficients \(\alpha_i\) from the allocation
@@ -340,7 +351,7 @@ upper-level data separate from the calibration data is necessary because
 their allocations are endogenous behaviors generated by the hypothesized
 planner or game, rather than externally imposed identification inputs.
 
-\subsection{Two simulation modes}
+\subsection{Implementation details}
 
 The MATLAB implementation contains two complementary integrators that solve
 the same biological ODEs:
@@ -374,8 +385,6 @@ convergence check against \texttt{ode15s}; the unit tests require their
 all-state RMS difference to remain below \(2\times10^{-3}\) on a representative
 experiment. If the model were made substantially stiffer, this comparison
 would need to be repeated and the optimization integrator or step size revised.
-
-\subsection{Software entry point}
 
 The entire workflow is launched by
 \begin{lstlisting}[style=matlabstyle]
@@ -873,7 +882,7 @@ The forward game is solved by damped iterative best response:
         20-iteration cap;
   \item verify that neither player obtains a material unilateral improvement.
 \end{enumerate}
-Each best response is an \texttt{fmincon} problem. The control-change test is
+Each best response is a nonlinear optimization problem (solved here using \texttt{fmincon}). The control-change test is
 the primary stopping criterion. A separate post-solution test re-optimizes
 each player's control while fixing its opponent and requires the largest
 possible objective improvement to be below \(10^{-4}\). The implementation
@@ -1012,39 +1021,14 @@ testInverseLadderCaseStudy.m & MATLAB unit tests.\\
 \end{tabularx}
 \end{table}
 
-The verified development environment is MATLAB R2026a Update 1 with
+We used MATLAB R2026a with
 Optimization Toolbox, Global Optimization Toolbox, Statistics and Machine
-Learning Toolbox, Signal Processing Toolbox, Symbolic Math Toolbox, Parallel
-Computing Toolbox, and Control System Toolbox. The current implementation uses
+Learning Toolbox, Signal Processing Toolbox, and Control System Toolbox. The current implementation uses
 the optimization, statistics, and signal-processing functionality directly.
 
-\begin{table}[H]
-\centering
-\caption{Verification summary.}
-\label{tab:verification}
-\begin{tabular}{lr}
-\toprule
-Check & Result\\
-\midrule
-Complete workflow runtime without plotting & approximately 25 s\\
-MATLAB unit tests & 4 of 4 passed\\
-MATLAB Code Analyzer findings & 0\\
-Saved numerical result file & verified\\
-Saved summary figure & verified\\
-Nash demonstration iterations & 16 of 20 (both experiments)\\
-Nash cold-start validation iterations & 16 of 20 (both experiments)\\
-Nash demonstration/validation gaps & \(\le 2.49\times10^{-3}\)\\
-Nash unilateral-improvement check & \(<4.4\times10^{-7}\)\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\clearpage
 \section[Interpretation and limitations]{\hspace{0.5em}Interpretation and limitations}
 
-\subsection{What the case study demonstrates}
-
-The case study provides a computationally coherent realization of the inverse
+\textbf{What the case study demonstrates}. The case study provides a simplified, but computationally coherent, realization of the inverse
 ladder:
 \begin{itemize}
   \item Level 1 recovers continuous kinetic parameters when the structure and
@@ -1057,12 +1041,12 @@ ladder:
         separate stationarity conditions.
 \end{itemize}
 
-The increasing data and modeling requirements are visible in the code. Levels
+The increasing data and modeling requirements are visible in the implementation. Levels
 1 and 2 use ordinary time-series observations and prescribed inputs. Levels 3
 and 4 additionally require controls, a candidate objective basis, and a
 forward optimal-control or game solver.
 
-\subsection{Important limitations}
+\textbf{Assumptions and limitations}. The case study presented here is a proof-of-concept example built upon several simplifying assumptions that may not accurately reflect real biological systems. Rather than aiming for biological realism, its objective is to provide a clear and pedagogical illustration of the hierarchical approach introduced in the main manuscript. The main assumptions are:
 
 \begin{enumerate}
   \item \textbf{Synthetic ground truth.} The trajectories, objectives, and
@@ -1086,29 +1070,12 @@ forward optimal-control or game solver.
         unilateral-deviation tests are therefore essential.
 \end{enumerate}
 
-\section{Recommended extensions}
-
-The most informative next developments are:
-\begin{enumerate}
-  \item design additional asymmetric perturbations specifically to resolve
-        the Level 2 allocation ambiguity;
-  \item add measurement noise to the Level 3 and Level 4 controls and quantify
-        confidence regions for the inferred weights;
-  \item compare the centralized and game formulations on the same behavior to
-        demonstrate cooperative mimicry explicitly;
-  \item replace synthetic allocations with gene-expression or metabolite-flux
-        measurements from an engineered two-strain consortium;
-  \item add profile-based or Bayesian uncertainty quantification for objective
-        weights;
-  \item test whether inferred objectives predict behavior under dilution,
-        nutrient, or partner-knockdown conditions excluded from inference.
-\end{enumerate}
 
 \section{Conclusions}
 
-The MATLAB implementation shows that all four levels can be represented in a
+Our case study and its MATLAB implementation shows that all four levels can be represented in a
 single biological and computational framework. Parameter estimation and sparse
-model discovery are inexpensive and mature enough for routine application.
+model discovery are inexpensive in this simplified example, but can be tricky for larger and more realistic dynamic models.
 Inverse optimal control is feasible for a small controlled community when
 allocation trajectories are available. A two-player inverse differential game
 is also computationally feasible under open-loop, finite-horizon assumptions,
@@ -1119,7 +1086,7 @@ The central lesson is not that the upper levels produce uniquely correct
 biological objectives. Rather, the implementation demonstrates how to formulate
 those hypotheses, diagnose their identifiability, and test their predictive
 consequences. The Level 2 structural ambiguity and the Level 4 conditioning
-difference between players are therefore substantive results: they make the
+difference between players are therefore significant results: they make the
 case study consistent with the manuscript's emphasis on both opportunities and
 limitations.
 
@@ -1130,6 +1097,18 @@ J. R. Banga and A. F. Villaverde,
 \emph{A Hierarchical Framework for Inverse Problems in Biological
 Cybernetics: Opportunities and Limitations},
 manuscript, 2026.
+
+\bibitem{Zomorrodi2012}
+A. R. Zomorrodi and C. D. Maranas,
+``OptCom: A multi-level optimization framework for the metabolic modeling and
+analysis of microbial communities,''
+\emph{PLoS Computational Biology}, vol. 8, no. 2, e1002363, 2012.
+
+\bibitem{Mauri2020}
+M.~Mauri, J.-L.~Gouzé, H.~de Jong, and E.~Cinquemani,
+``Enhanced production of heterologous proteins by a synthetic microbial community: Conditions and trade-offs,''
+\emph{PLOS Computational Biology}, vol.~16, no.~4, p.~e1007795, Apr.~2020.
+doi: \texttt{10.1371/journal.pcbi.1007795}.
 
 \bibitem{BruntonKutz2022}
 S. L. Brunton and J. N. Kutz,
@@ -1156,11 +1135,6 @@ T. L. Molloy, J. Inga, S. Hohmann, and T. Perez,
 \emph{Inverse Optimal Control and Inverse Noncooperative Dynamic Game Theory},
 Springer, 2022.
 
-\bibitem{Zomorrodi2012}
-A. R. Zomorrodi and C. D. Maranas,
-``OptCom: A multi-level optimization framework for the metabolic modeling and
-analysis of microbial communities,''
-\emph{PLoS Computational Biology}, vol. 8, no. 2, e1002363, 2012.
 
 \end{thebibliography}
 
