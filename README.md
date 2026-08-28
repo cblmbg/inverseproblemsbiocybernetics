@@ -9,9 +9,13 @@ shared substrate and reciprocally exchanges essential metabolites.
 
 The implementation was developed for MATLAB R2026a and directly requires:
 
-- Optimization Toolbox
-- Statistics and Machine Learning Toolbox
-- Signal Processing Toolbox
+- Optimization Toolbox (`lsqnonlin`, `lsqlin`, `fmincon`)
+- Statistics and Machine Learning Toolbox (`lasso`)
+- Signal Processing Toolbox (`sgolayfilt`)
+
+Adaptive integration uses base-MATLAB `ode15s`. No other toolboxes are
+required; in particular the Global Optimization Toolbox and Control System
+Toolbox are **not** used by this implementation.
 
 ## Run the complete case study
 
