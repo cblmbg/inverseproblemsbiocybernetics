@@ -5,13 +5,18 @@ timeGrid = cfg.control.timeGrid;
 numberOfExperiments = size(cfg.control.initialStates, 1);
 observations = cell(numberOfExperiments, 1);
 demonstrationSuccess = false(numberOfExperiments, 1);
-optimalityMatrix = [];
+optimalityMatrix = zeros(0, numel(cfg.level3.trueWeights));
 
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
     observations{experimentIndex} = solveCommunityPlanner(parameters, ...
         initialState, timeGrid, cfg.level3.trueWeights, cfg);
     demonstrationSuccess(experimentIndex) = observations{experimentIndex}.success;
+    % Do not let a failed demonstration enter the inverse problem: a non-optimal
+    % control profile is not a valid stationarity constraint.
+    if ~demonstrationSuccess(experimentIndex)
+        continue
+    end
     controls = observations{experimentIndex}.controls;
 
     % Use only genuinely interior controls. Rows at an active bound do not

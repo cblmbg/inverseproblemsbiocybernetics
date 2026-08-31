@@ -30,15 +30,22 @@ end
 fullSingularValues = zeros(numberOfFeatures, 1);
 fullSingularValues(1:numel(economySingularValues)) = economySingularValues;
 ascendingSpectrum = sort(fullSingularValues, "ascend");
-nullspaceSeparation = ascendingSpectrum(2) / max(ascendingSpectrum(1), eps);
+if numberOfFeatures >= 2
+    nullspaceSeparation = ascendingSpectrum(2) / max(ascendingSpectrum(1), eps);
+else
+    % A single-feature simplex has the unique weight 1; there is no competing
+    % direction from which to separate.
+    nullspaceSeparation = inf;
+end
 
-% A normalized objective direction is locally identifiable when the stationarity
-% rows leave a one-dimensional homogeneous null space that the simplex
-% normalization pins down, i.e. rank at least numberOfFeatures - 1 (three
-% independent rows suffice for four normalized weights). Bound-active
-% demonstrations that contribute no interior rows fail this test and are
-% reported as unidentifiable rather than being fit through bound rows.
-locallyIdentifiable = matrixRank >= numberOfFeatures - 1;
+% A normalized objective direction is locally identifiable only if the
+% constrained least-squares problem on the simplex has a unique minimizer, which
+% holds iff the stacked system [A; 1'] has full column rank. Testing rank(A)
+% alone is not sufficient: if the identified direction is parallel to the
+% normalization constraint, normalization adds no independent information and a
+% continuum of feasible weights fits the data equally well.
+normalizedRank = rank([optimalityMatrix; ones(1, numberOfFeatures)]);
+locallyIdentifiable = normalizedRank == numberOfFeatures;
 
 result.weights = weights;
 result.residualNorm = residualNorm;
@@ -50,6 +57,7 @@ result.fullSingularValues = fullSingularValues;
 result.nullspaceSeparation = nullspaceSeparation;
 result.matrixRank = matrixRank;
 result.nullity = nullity;
+result.normalizedRank = normalizedRank;
 result.numberOfEquations = numberOfEquations;
 result.locallyIdentifiable = locallyIdentifiable;
 end

@@ -139,7 +139,8 @@ Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
 |---|---|---|
 | Level 2 in-sample R² (strain 1 / 2) | 0.949728 / 0.945828 | 0.9567 / 0.9425 |
 | Level 2 held-out prediction R² (strain 1 / 2) | not reported | 0.9430 / 0.9622 |
-| `supportRecovered` | 1 (ignored false positives) | **0** (exact match) |
+| `supportRecovered` (noisy default) | false under the old metric too (strain 2 never selected Monod×allocation) | **0** (exact match; false positive now counted) |
+| `supportRecovered` (zero-noise probe) | 1 despite a spurious strain-2 term (the defect) | **0** (exact match) |
 | Strain 1 support | Monod, Monod×allocation | Monod, Monod×allocation (recovered; false pos 0, missed 0) |
 | Strain 2 support | Monod, +Allocation (spurious) | Monod, +Allocation (false pos 1, missed 1 — ambiguity persists) |
 | Selected penalty λ* (strain 1 / 2) | n/a (random-fold IndexMinMSE) | 1.09e-4 / 4.24e-3 |
@@ -187,3 +188,60 @@ Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
 | F6 non-finite integration result | floored to 1e-10 | rejected with `InverseLadder:NonFiniteState` |
 | F7 two requested times | 28×5 (adaptive mesh) | **2×5** (contract honored) |
 | Default workflow (L1–L4) | — | unchanged (L1 0.00572112, L3 0.0157222/verified, L4 verified); simulator-agreement test still passes |
+
+## Round 2 — verification-review responses (R1–R6, from `analysis_of_fixes_by_cdx/fix_branch_review.md`)
+
+Addresses the second review's findings on the fix branch. Files:
+`solveOpenLoopNash.m`, `solveCommunityPlanner.m`, `inferSimplexWeights.m`,
+`runLevel3InverseOptimalControl.m`, `runLevel4InverseDifferentialGame.m`,
+`runLevel2ModelDiscovery.m`, `simulateControlledModel.m`, `simulateCommunity.m`,
+`communityRhs.m`, new `validateModelParameters.m`, `testInverseLadderCaseStudy.m`.
+
+- **R1 (P1) — Nash certificate accepted infeasible profiles.** The starting
+  profile is projected onto the control box, and the certificate now requires the
+  final joint profile to satisfy the bounds (`feasible` field). An infeasible
+  initial guess can no longer be certified.
+- **R2 (P2) — rank ≥ n−1 overstated identification.** Identifiability now uses
+  the augmented-rank test `rank([A; 1']) == numberOfFeatures`, so a direction
+  parallel to the normalization is correctly reported as unidentified. Added
+  `normalizedRank`.
+- **R3 (P2) — non-finite kinetic parameters masked.** New
+  `validateModelParameters` is called at both simulator entries and rejects any
+  non-finite required field. The `communityRhs` comment is corrected.
+- **R4 (P2) — failed demonstrations still entered inference.** Levels 3 and 4 now
+  skip unsuccessful/uncertified demonstrations when assembling the inverse
+  matrix; if none remain, the objective is reported unidentifiable.
+- **R5 (P2) — one experiment silently skipped CV.** `fitGroupedLasso` requires at
+  least two groups; with one it uses a fixed fallback penalty and reports
+  `crossValidated = false` with a warning.
+- **R6 (P3) — one-feature inverse crashed.** The separation diagnostic guards the
+  single-feature case (unique weight 1); no more out-of-range index.
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**16/16** (added `testNashCertificateRequiresFeasibility`,
+`testIdentifiabilityRequiresNormalizationIndependence`,
+`testNonFiniteParametersRejected`, `testLevel2SingleGroupNotCrossValidated`,
+`testOneFeatureInverseProblem`; extended the failed-planner test for R4).
+
+| Probe | Before (4b670b1) | After round 2 |
+|---|---|---|
+| R1 infeasible Nash | `verified`, lower-bound violation 3.0e-4 | `verified`, violation **0** (profile feasible) |
+| R2 normalization-dependent A | `identifiable=1` | `identifiable=0` (normalizedRank 3 < 4) |
+| R3 NaN kinetic parameter | accepted, finite trajectory | rejected (`InverseLadder:NonFiniteParameter`) |
+| R4 failed demonstrations (maxIter=0) | 32 inverse rows, `identifiable=1` | **0** inverse rows, `identifiable=0`, `unverified` |
+| R5 one-experiment Level 2 | penalty returned as if cross-validated | `crossValidated=false`, fixed fallback penalty + warning |
+| R6 one-feature inverse | `MATLAB:badsubscript` crash | weight `1` |
+
+Default Levels 1–4 are unchanged (L1 0.00572112; L2 in-sample R² [0.957, 0.942];
+L3 0.0157222/verified/identifiable; L4 verified/identifiable). The KKT bound
+treatment (finding 2, full version) and Stage 5 remain the agreed follow-ups.
+
+### Documentation corrections (from the review)
+
+- The Stage 3 baseline `supportRecovered` label is corrected above: the noisy
+  default was already `false` under the old metric; the true-with-false-positive
+  case was the zero-noise probe.
+- `review_cdx_31aug26/reproduce_review.m` is a historical reproducer for the
+  original commit `62ee2e6`; its NaN-input probes now (correctly) raise errors on
+  the fixed simulators, so it is not expected to run unchanged on this branch.
+  `analysis_of_fixes_by_cdx/verify_fix_review.m` is the fix-branch probe runner.

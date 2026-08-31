@@ -12,6 +12,7 @@ arguments
     substeps (1,1) double {mustBeInteger,mustBePositive} = 4
 end
 
+validateModelParameters(parameters);
 numberOfIntervals = numel(timeGrid) - 1;
 if any(diff(timeGrid) <= 0)
     error("InverseLadder:IncreasingTimes", ...

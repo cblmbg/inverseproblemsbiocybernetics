@@ -12,6 +12,7 @@ arguments
     controls (:,2) double {mustBeFinite}
 end
 
+validateModelParameters(parameters);
 if size(controls, 1) ~= numel(controlTimes)
     error("InverseLadder:ControlSize", ...
         "The control array must have one row per control time.");

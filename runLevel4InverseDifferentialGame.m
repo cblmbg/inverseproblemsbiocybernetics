@@ -6,13 +6,18 @@ numberOfIntervals = numel(timeGrid) - 1;
 numberOfExperiments = size(cfg.control.initialStates, 1);
 observations = cell(numberOfExperiments, 1);
 demonstrationVerified = false(numberOfExperiments, 1);
-optimalityMatrices = {[], []};
+numberOfFeatures = size(cfg.level4.trueWeights, 1);
+optimalityMatrices = {zeros(0, numberOfFeatures), zeros(0, numberOfFeatures)};
 
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
     observations{experimentIndex} = solveOpenLoopNash(parameters, ...
         initialState, timeGrid, cfg.level4.trueWeights, cfg);
     demonstrationVerified(experimentIndex) = observations{experimentIndex}.converged;
+    % Do not let an uncertified equilibrium enter the inverse problem.
+    if ~demonstrationVerified(experimentIndex)
+        continue
+    end
     controls = observations{experimentIndex}.controls;
 
     for player = 1:2

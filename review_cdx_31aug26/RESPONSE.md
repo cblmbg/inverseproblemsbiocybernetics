@@ -17,6 +17,24 @@ Analyzer 0 findings; unit tests 11/11. See `RESPONSE_PLAN.md` for the plan and
 | 8 | P2 | "Support recovered" true while spurious terms present | 3 | Fixed — exact-match support metric with false-positive and missed counts |
 | 9 | P2 | Underdetermined objectives receive an infinite separation diagnostic | 2 | Fixed — padded singular spectrum; finite separation, rank, nullity, and identifiability reported |
 
+## Verification-review responses (round 2)
+
+A second review (`analysis_of_fixes_by_cdx/fix_branch_review.md`) checked the fix
+branch and raised six items — three acceptance-criterion gaps, one incomplete
+gate, and two regressions I had introduced. All six are now addressed on the
+branch (unit tests 16/16, 0 analyzer findings, defaults unchanged):
+
+| Ref | Item | Status |
+|-----|------|--------|
+| R1 | Nash certificate accepted infeasible profiles | Fixed — project the start onto the box; certificate requires the final profile to satisfy the bounds |
+| R2 | `rank(A) ≥ n−1` overstated identification | Fixed — augmented-rank test `rank([A; 1']) == n` |
+| R3 | Non-finite kinetic parameters masked | Fixed — `validateModelParameters` at both simulator entries |
+| R4 | Failed demonstrations still entered inference | Fixed — Levels 3/4 assemble the inverse matrix from successful/verified demonstrations only |
+| R5 | One experiment silently skipped cross-validation | Fixed — require ≥2 groups, else fixed fallback penalty with `crossValidated=false` |
+| R6 | One-feature inverse crashed | Fixed — single-feature special case |
+
+See `RESPONSE_CHANGES.md` (Round 2) for before/after probe results.
+
 ## Not in this PR (agreed follow-ups)
 
 - **Bound handling, full solution (finding 2):** add the bound-gradient (KKT)

@@ -32,12 +32,16 @@ solution.features = communityCostFeatures(timeGrid, states, controls, parameters
 solution.objectiveValue = objectiveValue;
 solution.exitFlag = exitFlag;
 solution.output = output;
-% Accept a solve only on a positive exit flag with finite outputs; a
-% non-positive flag means fmincon stopped without a certified local optimum
-% (for example when the iteration budget is exhausted), so the returned
-% controls must not be interpreted as an optimal demonstration.
+% Accept a solve only on a positive exit flag with finite outputs and a
+% feasible control profile; a non-positive flag means fmincon stopped without a
+% certified local optimum (for example when the iteration budget is exhausted),
+% so the returned controls must not be interpreted as an optimal demonstration.
+feasibilityTolerance = 1e-6;
+withinBounds = all(controls(:) >= cfg.control.lowerBound - feasibilityTolerance) ...
+    && all(controls(:) <= cfg.control.upperBound + feasibilityTolerance);
+solution.feasible = withinBounds;
 solution.success = exitFlag > 0 && all(isfinite(controls), "all") && ...
-    all(isfinite(states), "all");
+    all(isfinite(states), "all") && withinBounds;
 
     function value = objective(controlVector)
         candidateControls = reshape(controlVector, numberOfIntervals, 2);

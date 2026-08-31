@@ -15,6 +15,9 @@ if nargin < 6 || isempty(initialControls)
 else
     controls = initialControls;
 end
+% Project the starting profile onto the box so an infeasible initial guess is
+% not carried into the damped updates and certified as an equilibrium.
+controls = min(max(controls, cfg.control.lowerBound), cfg.control.upperBound);
 
 lowerBounds = cfg.control.lowerBound * ones(numberOfIntervals, 1);
 upperBounds = cfg.control.upperBound * ones(numberOfIntervals, 1);
@@ -77,7 +80,13 @@ end
 % seemingly small improvement may simply reflect a failed inner solve.
 finiteOutputs = all(isfinite(controls), "all") && all(isfinite(states), "all");
 finalSolvesSucceeded = all(finalExitFlags > 0);
-solverSuccess = finalSolvesSucceeded && finiteOutputs;
+% The certified profile must itself satisfy the control bounds: a zero unilateral
+% improvement does not establish feasibility, because an infeasible profile can
+% have a lower objective than any feasible alternative.
+feasibilityTolerance = 1e-6;
+withinBounds = all(controls(:) >= cfg.control.lowerBound - feasibilityTolerance) ...
+    && all(controls(:) <= cfg.control.upperBound + feasibilityTolerance);
+solverSuccess = finalSolvesSucceeded && finiteOutputs && withinBounds;
 unilateralImprovementToleranceSatisfied = max(unilateralImprovement) < ...
     cfg.level4.unilateralImprovementTolerance;
 verified = unilateralImprovementToleranceSatisfied && solverSuccess;
@@ -99,6 +108,7 @@ solution.unilateralImprovement = unilateralImprovement;
 solution.unilateralImprovementToleranceSatisfied = ...
     unilateralImprovementToleranceSatisfied;
 solution.solverSuccess = solverSuccess;
+solution.feasible = withinBounds;
 solution.finalExitFlags = finalExitFlags;
 solution.innerSolvesSucceeded = innerSolvesSucceeded;
 

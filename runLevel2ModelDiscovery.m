@@ -30,6 +30,7 @@ holdoutRmse = nan(1, 2);
 sampleCount = zeros(1, 2);
 holdoutSampleCount = zeros(1, 2);
 selectedLambda = zeros(1, 2);
+crossValidated = false(1, 2);
 
 holdoutExperiments = generateHoldoutExperiments(cfg);
 
@@ -39,8 +40,9 @@ for strain = 1:2
 
     % Leave-one-experiment-out penalty selection (no window overlap across
     % folds), then refit on all fitting data at the selected penalty.
-    [beta, intercept, lambdaStar] = fitGroupedLasso(designMatrix, response, ...
-        groups);
+    [beta, intercept, lambdaStar, wasCrossValidated] = fitGroupedLasso( ...
+        designMatrix, response, groups);
+    crossValidated(strain) = wasCrossValidated;
     beta(abs(beta) < cfg.level2.coefficientThreshold * max(abs(beta))) = 0;
 
     prediction = intercept + designMatrix * beta;
@@ -81,6 +83,7 @@ result.holdoutRmse = holdoutRmse;
 result.sampleCount = sampleCount;
 result.holdoutSampleCount = holdoutSampleCount;
 result.selectedLambda = selectedLambda;
+result.crossValidated = crossValidated;
 result.expectedSupport = expectedSupport;
 result.trueTermsRecovered = trueTermsRecovered;
 result.falsePositiveCount = falsePositiveCount;
@@ -150,29 +153,39 @@ for experimentIndex = 1:numel(experiments)
 end
 end
 
-function [beta, intercept, lambdaStar] = fitGroupedLasso(designMatrix, ...
-    response, groups)
+function [beta, intercept, lambdaStar, crossValidated] = fitGroupedLasso( ...
+    designMatrix, response, groups)
 %FITGROUPEDLASSO Select the LASSO penalty by leave-one-experiment-out CV.
 [~, pathInfo] = lasso(designMatrix, response, "Standardize", true);
 lambdas = pathInfo.Lambda;
 uniqueGroups = unique(groups);
-squaredError = zeros(1, numel(lambdas));
-validationCount = 0;
-for groupIndex = uniqueGroups(:)'
-    trainRows = groups ~= groupIndex;
-    testRows = groups == groupIndex;
-    if ~any(trainRows) || ~any(testRows)
-        continue
+if numel(uniqueGroups) < 2
+    % Leave-one-experiment-out cross-validation needs at least two groups. With
+    % only one, fall back to a fixed mid-path penalty and report that no fold
+    % ran, rather than presenting an uncross-validated penalty as selected.
+    crossValidated = false;
+    lambdaStar = lambdas(max(1, round(numel(lambdas) / 2)));
+    warning("runLevel2ModelDiscovery:noCrossValidation", ...
+        "Fewer than two experiment groups are available; the LASSO penalty " + ...
+        "was set to a fixed fallback value rather than cross-validated.");
+else
+    crossValidated = true;
+    squaredError = zeros(1, numel(lambdas));
+    validationCount = 0;
+    for groupIndex = uniqueGroups(:)'
+        trainRows = groups ~= groupIndex;
+        testRows = groups == groupIndex;
+        [trainBeta, trainInfo] = lasso(designMatrix(trainRows, :), ...
+            response(trainRows), "Lambda", lambdas, "Standardize", true);
+        prediction = trainInfo.Intercept + designMatrix(testRows, :) * trainBeta;
+        squaredError = squaredError + ...
+            sum((prediction - response(testRows)).^2, 1);
+        validationCount = validationCount + sum(testRows);
     end
-    [trainBeta, trainInfo] = lasso(designMatrix(trainRows, :), ...
-        response(trainRows), "Lambda", lambdas, "Standardize", true);
-    prediction = trainInfo.Intercept + designMatrix(testRows, :) * trainBeta;
-    squaredError = squaredError + sum((prediction - response(testRows)).^2, 1);
-    validationCount = validationCount + sum(testRows);
+    crossValidatedMse = squaredError / validationCount;
+    [~, bestLambdaIndex] = min(crossValidatedMse);
+    lambdaStar = lambdas(bestLambdaIndex);
 end
-crossValidatedMse = squaredError / validationCount;
-[~, bestLambdaIndex] = min(crossValidatedMse);
-lambdaStar = lambdas(bestLambdaIndex);
 [beta, refitInfo] = lasso(designMatrix, response, "Lambda", lambdaStar, ...
     "Standardize", true);
 intercept = refitInfo.Intercept;

@@ -61,17 +61,22 @@ verifyGreaterThan(testCase, max(solution.unilateralImprovement), ...
 end
 
 function testFailedPlannerSolvesAreUnverified(testCase)
-% Finding 3: with a zero iteration budget the planner cannot solve, so the
-% demonstrations and validations are not optimal. The level must report an
-% unverified status and must not return misleadingly small reproduction errors.
+% Findings 3 and R4: with a zero iteration budget the planner cannot solve, so
+% the demonstrations are not optimal. The level must report an unverified
+% status, must not return misleadingly small reproduction errors, and must not
+% let the failed demonstrations enter the inverse problem.
 cfg = defaultInverseLadderConfig();
 cfg.optimization.maximumIterations = 0;
-warningState = warning("off", "runLevel3InverseOptimalControl:unverified");
+warningState = warning;
+warning("off", "runLevel3InverseOptimalControl:unverified");
+warning("off", "runLevel3InverseOptimalControl:notIdentifiable");
 cleanup = onCleanup(@() warning(warningState));
 result = runLevel3InverseOptimalControl(cfg, cfg.trueParameters);
 verifyEqual(testCase, result.status, "unverified");
 verifyTrue(testCase, all(isnan(result.controlRmse)));
 verifyTrue(testCase, all(~result.demonstrationSuccess));
+verifyEqual(testCase, result.interiorRowCount, 0);
+verifyFalse(testCase, result.identifiable);
 end
 
 function testBoundActiveDemonstrationNotIdentifiable(testCase)
@@ -139,4 +144,61 @@ cfg = defaultInverseLadderConfig();
 states = simulateCommunity(cfg.trueParameters, cfg.defaultInitialState, ...
     [0 1], [0 1], 0.35*ones(2, 2));
 verifySize(testCase, states, [2, 5]);
+end
+
+function testNashCertificateRequiresFeasibility(testCase)
+% R1: an infeasible initial guess must not be carried into the updates and
+% certified. The returned profile must satisfy the control bounds.
+cfg = defaultInverseLadderConfig();
+cfg.control.initialGuess = 0;
+weights = [0 0; 1 1; 0 0; 0 0];
+solution = solveOpenLoopNash(cfg.trueParameters, cfg.defaultInitialState, ...
+    cfg.control.timeGrid, weights, cfg);
+verifyGreaterThanOrEqual(testCase, min(solution.controls(:)), ...
+    cfg.control.lowerBound - 1e-6);
+verifyTrue(testCase, solution.feasible);
+end
+
+function testIdentifiabilityRequiresNormalizationIndependence(testCase)
+% R2: rank(A) = features-1 is not sufficient for identification when the
+% identified direction is parallel to the normalization constraint.
+cfg = defaultInverseLadderConfig();
+matrix = [1 1 1 1; 1 -1 0 0; 0 0 1 -1];
+result = inferSimplexWeights(matrix, cfg);
+verifyEqual(testCase, result.matrixRank, 3);
+verifyEqual(testCase, result.normalizedRank, 3);
+verifyFalse(testCase, result.locallyIdentifiable);
+end
+
+function testNonFiniteParametersRejected(testCase)
+% R3: a non-finite kinetic parameter must be rejected, not silently masked.
+cfg = defaultInverseLadderConfig();
+p = cfg.trueParameters;
+p.allocationCost(1) = NaN;
+verifyError(testCase, ...
+    @() simulateControlledModel(p, cfg.defaultInitialState, [0 1 2], ...
+    0.35*ones(2, 2), 4), "InverseLadder:NonFiniteParameter");
+verifyError(testCase, ...
+    @() simulateCommunity(p, cfg.defaultInitialState, [0 1 2], [0 1 2], ...
+    0.35*ones(3, 2)), "InverseLadder:NonFiniteParameter");
+end
+
+function testLevel2SingleGroupNotCrossValidated(testCase)
+% R5: leave-one-experiment-out selection needs at least two groups. With one
+% experiment, the penalty must be reported as not cross-validated.
+cfg = defaultInverseLadderConfig();
+rng(cfg.randomSeed, "twister");
+experiments = generateCalibrationData(cfg);
+warningState = warning("off", "runLevel2ModelDiscovery:noCrossValidation");
+cleanup = onCleanup(@() warning(warningState));
+result = runLevel2ModelDiscovery(cfg, experiments(1), cfg.trueParameters);
+verifyTrue(testCase, all(~result.crossValidated));
+end
+
+function testOneFeatureInverseProblem(testCase)
+% R6: a one-feature simplex has the unique weight 1 and must not crash.
+cfg = defaultInverseLadderConfig();
+result = inferSimplexWeights(zeros(3, 1), cfg);
+verifyEqual(testCase, result.weights, 1, "AbsTol", 1e-8);
+verifyTrue(testCase, result.locallyIdentifiable);
 end
