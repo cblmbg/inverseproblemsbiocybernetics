@@ -1,0 +1,45 @@
+Review execution evidence: MATLAB 26.1.0.3234472 (R2026a) Update 1
+Analyzer findings: 0
+Supplied tests: 4 passed, 0 failed
+Baseline: L1 error=0.00572112 L2 R2=[0.94972834 0.94582764] L3 weight error=0.0157222 control RMSE=2.89809e-05 L4 weight errors=[0.01001538 0.0010738804] control RMSE=0.00136474
+F1: converged=1 iterations=1 gap=0.00104065 improvements=[0.0793998999 0.0727929372]
+F2: weights=[1.40383822e-07 0.942476996 0.0575227892 7.47230685e-08] error=0.0813497 control RMSE=0.00476334
+F3: planner exit=0 control RMSE=0 weight error=0.806639; game demo converged=0,0 validation converged=0,0
+F4: strain, original quadrature RMS, ZOH-consistent RMS
+                         1       0.00418996729727194      0.000568363213138178
+                         2        0.0029597582675347      0.000474222190497921
+
+F5: fractions of held-out windows sharing raw samples=1,1
+F6: NaN time returns finite=1 endpoint=[1e-10 1e-10 1e-10 1e-10 1e-10]; NaN control returns finite=1
+F7: requested 2 times, returned shape [28 5]
+F8: noise-free supportRecovered=1 falsePositiveCount=1 coefficients:
+         0.537343595120126         0.482291338600469
+        -0.187981234692745        -0.120175713245316
+                         0                         0
+                         0                         0
+                         0                         0
+                         0                         0
+                         0       -0.0160999879928007
+
+F9: rank=1 gap=Inf weights=[0.25000000000263 0.25000000000263 0.249999999997464 0.249999999997464]
+Numerical refinement: level, experiment, RK4 substeps, RMS error, maximum error
+                         3                         1                         4       0.00041143487916474       0.00248143897619424
+                         3                         1                         8      1.97446766386665e-05      0.000119737820440724
+                         3                         1                        16      1.06910924632905e-06      6.47676247617079e-06
+                         3                         1                        64      6.64677922161409e-09      2.79575591566328e-08
+                         3                         2                         4       0.00080184572411151       0.00488023058587012
+                         3                         2                         8      3.64777727329247e-05      0.000222168641076492
+                         3                         2                        16      1.91865804565711e-06      1.16563502154943e-05
+                         3                         2                        64      9.28000396360858e-09      4.49279402015001e-08
+                         4                         1                         4      4.19886848315384e-05      0.000205861019086817
+                         4                         1                         8      2.57258456409452e-06      1.22719747163158e-05
+                         4                         1                        16      1.65006907567231e-07      7.63707023732074e-07
+                         4                         1                        64      8.61528638139519e-09      3.32562684057791e-08
+                         4                         2                         4      0.000106014609952294      0.000543429133611273
+                         4                         2                         8      6.25389535688702e-06      3.04191306106372e-05
+                         4                         2                        16      3.83692290059599e-07      1.80397739091287e-06
+                         4                         2                        64      7.71336028956296e-09      3.08818535188493e-08
+
+Additional multistart unilateral deviations
+      2.99118411900556e-07      5.74639655859244e-08
+      4.38750890868755e-07      1.12275442165632e-07
