@@ -17,6 +17,7 @@ The implementation was developed for MATLAB R2026a and directly requires:
 - Optimization Toolbox (`lsqnonlin`, `lsqlin`, `fmincon`)
 - Statistics and Machine Learning Toolbox (`lasso`)
 - Signal Processing Toolbox (`sgolayfilt`)
+- Symbolic Math Toolbox (required by the STRIKE-GOLDD toolbox)
 
 Adaptive integration uses base-MATLAB `ode15s`. No other toolboxes are
 required; in particular the Global Optimization Toolbox and Control System
@@ -49,7 +50,7 @@ interpretive inverse problems:
 
 1. **Level 1 — parameter estimation:** estimate six kinetic parameters from
    noisy dynamic data while treating the allocation schedules as known
-   experimental inputs.
+   experimental inputs. 
 2. **Level 2 — model discovery:** infer sparse per-capita growth laws from
    observations and known allocation schedules.
 3. **Level 3 — inverse optimal control:** treat allocation as endogenous and
@@ -79,6 +80,7 @@ results = runInverseLadderCaseStudy;
 The implementation includes:
 
 - the community ODE model and simulation utilities;
+- structural local identifiability and observability analysis with the STRIKE-GOLDD toolbox;
 - synthetic calibration experiments with rich allocation perturbations;
 - constrained kinetic-parameter estimation;
 - sparse model discovery using smoothing, window-integrated growth,
@@ -122,12 +124,13 @@ results = runInverseLadderCaseStudy;
 
 This command:
 
-1. generates noisy synthetic experiments;
-2. estimates six kinetic parameters;
-3. discovers a sparse biomass growth law;
-4. infers a centralized community objective using inverse stationarity;
-5. infers strain-specific objectives from an open-loop Nash equilibrium;
-6. performs forward validation and creates a summary figure.
+1. analyses the structural local identifiability and observability of several model variants;
+2. generates noisy synthetic experiments;
+3. estimates six kinetic parameters;
+4. discovers a sparse biomass growth law;
+5. infers a centralized community objective using inverse stationarity;
+6. infers strain-specific objectives from an open-loop Nash equilibrium;
+7. performs forward validation and creates a summary figure.
 
 The run saves `inverse_ladder_results.mat` and `inverse_ladder_summary.png` in
 this folder. To suppress files and graphics:
