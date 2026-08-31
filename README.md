@@ -148,8 +148,11 @@ runtests("testInverseLadderCaseStudy.m")
 
 The tests verify model dimensions and finiteness, nonnegative simulation,
 agreement between the `ode15s` and RK4 simulations, and constrained recovery of
-a known simplex-normalized objective. The last MATLAB verification reported four
-of four unit tests passing and no MATLAB Code Analyzer findings.
+a known simplex-normalized objective, together with regression tests for the
+solver-success and Nash-feasibility certificates, the objective-identifiability
+diagnostics, non-finite input handling, and the Level 2 support and
+cross-validation metrics. The last MATLAB verification reported 18 of 18 unit
+tests passing and no MATLAB Code Analyzer findings.
 
 ## Results summary
 
@@ -204,7 +207,9 @@ states, also assesses observability of the unmeasured states.
   metabolites `M1 + M2`; measuring only a single strain instead of the sum makes
   some parameters unidentifiable (the structural identifiability limit). To stay
   well away from this limit, the case study assumes full-state measurement and
-  focuses on six of the parameters.
+  focuses on six of the parameters. These structural results are reproduced in
+  code by `runLevel1aprioriIdentifiability`, which runs the STRIKE-GOLDD toolbox
+  on the three observation configurations at the start of the workflow.
 - **Practical identifiability.** With the baseline noise level (0.5% of the
   maximum state scale) the RMS relative parameter error is about 0.57%.
   Increasing the Gaussian noise to 5%, 10%, and 20% raises the error to roughly
