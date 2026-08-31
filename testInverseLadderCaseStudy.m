@@ -100,3 +100,20 @@ verifyFalse(testCase, result.locallyIdentifiable);
 verifyEqual(testCase, result.nullity, 3);
 verifyEqual(testCase, result.matrixRank, 1);
 end
+
+function testLevel2SupportMetricIsExact(testCase)
+% Finding 8: supportRecovered must mean exact recovery of the true support
+% (both true terms present and zero false positives), not merely that the two
+% true terms appear. Also checks that a held-out prediction metric is produced.
+cfg = defaultInverseLadderConfig();
+cfg.calibration.relativeNoise = 0;
+data = generateCalibrationData(cfg);
+result = runLevel2ModelDiscovery(cfg, data, cfg.trueParameters);
+verifyEqual(testCase, result.supportRecovered, ...
+    all(result.trueTermsRecovered) && all(result.falsePositiveCount == 0));
+if any(result.falsePositiveCount > 0)
+    verifyFalse(testCase, result.supportRecovered);
+end
+verifyEqual(testCase, numel(result.holdoutR2), 2);
+verifyTrue(testCase, all(result.holdoutSampleCount > 0));
+end

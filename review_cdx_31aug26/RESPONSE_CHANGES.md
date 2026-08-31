@@ -104,9 +104,60 @@ fallback was never triggered by the shipped demonstrations (they contain enough
 interior controls); it only removes the silent misuse of bound rows under
 supported configurations such as F2.
 
-## Stage 3 — Level 2 quadrature, folds, and support metric (results regenerated)
+## Stage 3 — Level 2 quadrature, folds, and support metric (findings 4, 5, 8; results regenerated)
 
-_Pending._
+Files: `runLevel2ModelDiscovery.m` (rewritten), `defaultInverseLadderConfig.m`,
+`runInverseLadderCaseStudy.m`, `testInverseLadderCaseStudy.m`. Regenerated:
+`inverse_ladder_results.mat`, `inverse_ladder_summary.png`.
+
+What changed:
+- **Quadrature (finding 4):** the allocation-dependent candidates (`Monod x
+  allocation` and `Allocation`) are integrated with a left-held zero-order
+  convention, matching the piecewise-constant control that generated the data,
+  instead of trapezoidally averaging across control switches. State-derived
+  candidates keep trapezoidal integration.
+- **Fold leakage (finding 5):** the LASSO penalty is now selected by
+  leave-one-experiment-out cross-validation, so overlapping windows never
+  straddle a train/validation split and per-experiment smoothing cannot leak
+  between folds. Selection is deterministic (no dependence on the global RNG
+  state). `fitR2` is documented as an in-sample integrated-growth statistic.
+- **Independent prediction (criterion 3):** two separate held-out experiments
+  (distinct initial states, independent noise seed) are generated and used only
+  to report generalization (`holdoutR2`, `holdoutRmse`). They are not used to
+  select the penalty.
+- **Support metric (finding 8):** `supportRecovered` now means exact recovery
+  for both strains (every true term present and zero false positives). Added
+  `trueTermsRecovered`, `falsePositiveCount`, `missedCount`,
+  `exactSupportRecovered`.
+- Runner prints in-sample R², held-out R², and exact-support recovery; the
+  earlier mislabeled "derivative-fit R^2" wording is corrected.
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**9/9** (added `testLevel2SupportMetricIsExact`).
+
+| Quantity | Baseline | After Stage 3 |
+|---|---|---|
+| Level 2 in-sample R² (strain 1 / 2) | 0.949728 / 0.945828 | 0.9567 / 0.9425 |
+| Level 2 held-out prediction R² (strain 1 / 2) | not reported | 0.9430 / 0.9622 |
+| `supportRecovered` | 1 (ignored false positives) | **0** (exact match) |
+| Strain 1 support | Monod, Monod×allocation | Monod, Monod×allocation (recovered; false pos 0, missed 0) |
+| Strain 2 support | Monod, +Allocation (spurious) | Monod, +Allocation (false pos 1, missed 1 — ambiguity persists) |
+| Selected penalty λ* (strain 1 / 2) | n/a (random-fold IndexMinMSE) | 1.09e-4 / 4.24e-3 |
+
+Regenerated Level 2 coefficients:
+
+| Term | Strain 1 | Strain 2 |
+|---|---:|---:|
+| Monod cross-feeding | 0.5177 | 0.4076 |
+| Monod × allocation | −0.1887 | 0 |
+| Allocation | 0 | −0.0337 |
+| (all other terms) | 0 | 0 |
+
+The Level 2 numbers change, as expected: correcting the input quadrature and the
+cross-validation moves the fit statistics and coefficients. The qualitative
+message is unchanged and now honestly quantified — strain 1 recovers the true
+mechanism, while strain 2 remains structurally ambiguous (a good predictive fit,
+in-sample and held-out, with the wrong term). Levels 1, 3, and 4 are unchanged.
 
 ## Stage 4 — Non-finite inputs and simulator contract
 

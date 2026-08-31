@@ -41,6 +41,16 @@ cfg.control.initialStates = [ ...
     0.15, 0.12, 6.0, 0.02, 0.02; ...
     0.26, 0.08, 8.0, 0.04, 0.01];
 
+cfg.level2.windowLength = 4;
+cfg.level2.coefficientThreshold = 0.03;
+% Held-out experiments used only to report independent-prediction performance;
+% they are separate from the three calibration experiments and use an
+% independent noise realization.
+cfg.level2.holdoutInitialStates = [ ...
+    0.20, 0.10, 5.0, 0.03, 0.02; ...
+    0.10, 0.18, 7.0, 0.02, 0.04];
+cfg.level2.holdoutSeed = 4242;
+
 cfg.level3.trueWeights = [0.62; 0.14; 0.14; 0.10];
 cfg.level3.featureNames = ["Total biomass"; "Control effort"; ...
     "Residual substrate"; "Community imbalance"];
