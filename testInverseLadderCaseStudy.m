@@ -202,3 +202,32 @@ result = inferSimplexWeights(zeros(3, 1), cfg);
 verifyEqual(testCase, result.weights, 1, "AbsTol", 1e-8);
 verifyTrue(testCase, result.locallyIdentifiable);
 end
+
+function testNashRejectsNonFiniteStart(testCase)
+% N1: a non-finite starting profile must be rejected, not silently projected
+% onto a bound. Covers both the configured guess and an explicit warm start.
+cfg = defaultInverseLadderConfig();
+weights = [0 0; 1 1; 0 0; 0 0];
+badCfg = cfg;
+badCfg.control.initialGuess = NaN;
+verifyError(testCase, ...
+    @() solveOpenLoopNash(cfg.trueParameters, cfg.defaultInitialState, ...
+    cfg.control.timeGrid, weights, badCfg), "InverseLadder:NonFiniteControls");
+initialControls = 0.35 * ones(numel(cfg.control.timeGrid) - 1, 2);
+initialControls(1, 1) = NaN;
+verifyError(testCase, ...
+    @() solveOpenLoopNash(cfg.trueParameters, cfg.defaultInitialState, ...
+    cfg.control.timeGrid, weights, cfg, initialControls), ...
+    "InverseLadder:NonFiniteControls");
+end
+
+function testIdentifiabilityFlagIsConservativeAtBoundary(testCase)
+% N2: the augmented-rank flag is a conservative (sufficient, not necessary)
+% criterion. A boundary-unique case (min (w2+w3)^2 on the simplex has the unique
+% minimizer [1;0;0]) is reported as not identifiable; the flag must be false and
+% must not error.
+cfg = defaultInverseLadderConfig();
+result = inferSimplexWeights([0 1 1], cfg);
+verifyEqual(testCase, result.normalizedRank, 2);
+verifyFalse(testCase, result.locallyIdentifiable);
+end

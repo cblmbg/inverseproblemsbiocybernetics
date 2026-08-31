@@ -38,12 +38,15 @@ else
     nullspaceSeparation = inf;
 end
 
-% A normalized objective direction is locally identifiable only if the
-% constrained least-squares problem on the simplex has a unique minimizer, which
-% holds iff the stacked system [A; 1'] has full column rank. Testing rank(A)
-% alone is not sufficient: if the identified direction is parallel to the
-% normalization constraint, normalization adds no independent information and a
-% continuum of feasible weights fits the data equally well.
+% Conservative local-identifiability flag. Full column rank of the stacked
+% system [A; 1'] is *sufficient* for a unique minimizer on the affine
+% normalization plane, so it rules out the parallel-to-normalization
+% non-uniqueness that a rank(A) test alone misses. It is *not necessary* on the
+% nonnegative simplex: active nonnegativity constraints can make a boundary
+% solution unique even when [A; 1'] is rank deficient, so this flag can be a
+% (safe) false negative at the boundary. Uniqueness supplied only by the
+% regularizer is likewise not data identification. A full active-set uniqueness
+% test is left as a separate diagnostic.
 normalizedRank = rank([optimalityMatrix; ones(1, numberOfFeatures)]);
 locallyIdentifiable = normalizedRank == numberOfFeatures;
 

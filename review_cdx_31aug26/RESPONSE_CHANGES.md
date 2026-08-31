@@ -245,3 +245,27 @@ treatment (finding 2, full version) and Stage 5 remain the agreed follow-ups.
   original commit `62ee2e6`; its NaN-input probes now (correctly) raise errors on
   the fixed simulators, so it is not expected to run unchanged on this branch.
   `analysis_of_fixes_by_cdx/verify_fix_review.m` is the fix-branch probe runner.
+
+### Round 2 addendum — third-review items (N1, N2)
+
+A follow-up review of `2fa85bb` confirmed R1–R6 and raised two items:
+
+- **N1 (P2) — the R1 projection masked non-finite starting controls.** Projecting
+  `min(max(controls, lb), ub)` mapped a NaN/Inf initial guess onto a bound before
+  the simulator's finiteness check could catch it (a regression versus the
+  pre-round-2 behavior). Fixed: `solveOpenLoopNash` now rejects a non-finite
+  starting profile (`InverseLadder:NonFiniteControls`) before projecting, for
+  both `cfg.control.initialGuess` and an explicit `initialControls` matrix.
+- **N2 (P3) — qualify the identifiability wording.** The augmented-rank test is a
+  *conservative sufficient* condition for uniqueness on the affine normalization
+  plane, not an exact equivalence on the nonnegative simplex (an active-bound
+  boundary solution can be unique even when `[A; 1']` is rank deficient). The
+  `inferSimplexWeights` comment is corrected to state this; the flag behavior is
+  unchanged (a safe false negative at the boundary).
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**18/18** (added `testNashRejectsNonFiniteStart`,
+`testIdentifiabilityFlagIsConservativeAtBoundary`). Probes: NaN configured guess
+and NaN warm-start both rejected; a finite out-of-range guess is still projected
+and solved; the boundary example `[0 1 1]` reports `identifiable=false`
+(conservative). Default Levels 1–4 unchanged.

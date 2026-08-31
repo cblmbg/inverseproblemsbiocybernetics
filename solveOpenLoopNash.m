@@ -15,8 +15,14 @@ if nargin < 6 || isempty(initialControls)
 else
     controls = initialControls;
 end
-% Project the starting profile onto the box so an infeasible initial guess is
-% not carried into the damped updates and certified as an equilibrium.
+% Reject a non-finite starting profile before projecting; projecting first
+% would silently map NaN or Inf onto a bound and mask invalid input.
+if ~all(isfinite(controls), "all")
+    error("InverseLadder:NonFiniteControls", ...
+        "The initial control profile must be finite.");
+end
+% Project the finite starting profile onto the box so an out-of-range initial
+% guess is not carried into the damped updates and certified as an equilibrium.
 controls = min(max(controls, cfg.control.lowerBound), cfg.control.upperBound);
 
 lowerBounds = cfg.control.lowerBound * ones(numberOfIntervals, 1);

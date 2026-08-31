@@ -33,7 +33,14 @@ branch (unit tests 16/16, 0 analyzer findings, defaults unchanged):
 | R5 | One experiment silently skipped cross-validation | Fixed — require ≥2 groups, else fixed fallback penalty with `crossValidated=false` |
 | R6 | One-feature inverse crashed | Fixed — single-feature special case |
 
-See `RESPONSE_CHANGES.md` (Round 2) for before/after probe results.
+A third review of `2fa85bb` confirmed R1–R6 and raised two more, both now fixed:
+
+| Ref | Item | Status |
+|-----|------|--------|
+| N1 | R1 projection masked non-finite starting controls | Fixed — reject non-finite start before projecting (`InverseLadder:NonFiniteControls`) |
+| N2 | Augmented-rank wording overstated (sufficient, not necessary) | Fixed — comment qualified as a conservative criterion; behavior unchanged |
+
+See `RESPONSE_CHANGES.md` (Round 2 and addendum) for before/after probe results.
 
 ## Not in this PR (agreed follow-ups)
 
