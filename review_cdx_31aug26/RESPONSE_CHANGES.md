@@ -67,9 +67,42 @@ Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
 No default coefficient, weight, or error metric changed; the only behavioral
 change on default runs is the added, explicit `verified` status.
 
-## Stage 2 — Bound handling and identifiability diagnostics
+## Stage 2 — Bound handling and identifiability diagnostics (findings 2, 9)
 
-_Pending._
+Files: `runLevel3InverseOptimalControl.m`, `runLevel4InverseDifferentialGame.m`,
+`inferSimplexWeights.m`, `runInverseLadderCaseStudy.m`,
+`testInverseLadderCaseStudy.m`.
+
+What changed:
+- Removed the "fewer than four interior controls ⇒ restore all rows" fallback in
+  Levels 3 and 4. Only genuinely interior stationarity rows are used, pooled
+  across demonstrations; bound-active rows (whose gradient is balanced by a
+  bound multiplier) no longer enter the unconstrained stationarity system.
+- `inferSimplexWeights`: the singular spectrum is padded to the number of
+  features, so a wide (row-deficient) matrix reports genuine underdetermination
+  instead of an infinite separation. Added `matrixRank`, `nullity`,
+  `fullSingularValues`, and `locallyIdentifiable` (rank ≥ features−1: three
+  independent rows identify four normalized weights). Empty matrices are handled.
+- Levels 3 and 4 report `identifiable` and `interiorRowCount`, and warn when the
+  objective is not identified. The top-level runner prints identifiability.
+- Interior-row pooling with rank reporting is the approved first pass; the full
+  bound-gradient (KKT) inequalities remain a follow-up.
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**8/8** (added `testBoundActiveDemonstrationNotIdentifiable`,
+`testUnderdeterminedSeparationIsFinite`).
+
+| Case | Baseline | After Stage 2 |
+|---|---|---|
+| Default L3 | weight err 0.0157222, cRMSE 2.89809e-05 | **unchanged**, `identifiable=1` |
+| Default L4 | weight err 0.0100154 / 0.00107388, cRMSE 0.00136474 | **unchanged**, `identifiable=[true true]` |
+| F2 bound-active (`trueWeights=[0;1;0;0]`) | inferred ≈ [0, 0.9425, 0.0575, 0], weight error 0.0813 (confidently wrong) | `identifiable=0`, interior rows 0, weights fall back to prior [0.25 0.25 0.25 0.25], flagged not identified |
+| F9 one-row matrix | rank 1, separation **Inf** | rank 1, nullity 3, separation **0** (finite), `identifiable=0` |
+
+Removing the fallback did **not** change any default result, confirming the
+fallback was never triggered by the shipped demonstrations (they contain enough
+interior controls); it only removes the silent misuse of bound rows under
+supported configurations such as F2.
 
 ## Stage 3 — Level 2 quadrature, folds, and support metric (results regenerated)
 

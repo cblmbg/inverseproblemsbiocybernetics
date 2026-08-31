@@ -19,14 +19,15 @@ for experimentIndex = 1:numberOfExperiments
         controlIndices = (1:numberOfIntervals)' + ...
             (player - 1)*numberOfIntervals;
         playerControls = controls(:, player);
+        % Use only genuinely interior controls; rows at an active bound do not
+        % satisfy an unconstrained stationarity condition. Interior rows are
+        % pooled across demonstrations and their combined rank determines
+        % identifiability below.
         interior = playerControls > cfg.control.lowerBound + ...
             cfg.inverse.activeBoundTolerance & ...
             playerControls < cfg.control.upperBound - ...
             cfg.inverse.activeBoundTolerance;
         variableIndices = controlIndices(interior);
-        if numel(variableIndices) < 4
-            variableIndices = controlIndices;
-        end
 
         featureFunction = @(states, candidateControls) ...
             playerCostFeatures(player, timeGrid, states, candidateControls);
@@ -82,6 +83,16 @@ result.inverseDiagnostics = inverseDiagnostics;
 result.featureNames = cfg.level4.featureNames;
 result.demonstrationVerified = demonstrationVerified;
 result.validationVerified = validationVerified;
+result.identifiable = [inverseDiagnostics{1}.locallyIdentifiable, ...
+    inverseDiagnostics{2}.locallyIdentifiable];
+result.interiorRowCount = [inverseDiagnostics{1}.numberOfEquations, ...
+    inverseDiagnostics{2}.numberOfEquations];
+if ~all(result.identifiable)
+    warning("runLevel4InverseDifferentialGame:notIdentifiable", ...
+        "One or more players provide insufficient interior information to " + ...
+        "identify a normalized objective; the reported weights fall back to " + ...
+        "the regularized prior and are not identified by the data.");
+end
 if allEquilibriaVerified
     result.status = "verified";
 else

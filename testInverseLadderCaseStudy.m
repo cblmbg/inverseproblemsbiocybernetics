@@ -73,3 +73,30 @@ verifyEqual(testCase, result.status, "unverified");
 verifyTrue(testCase, all(isnan(result.controlRmse)));
 verifyTrue(testCase, all(~result.demonstrationSuccess));
 end
+
+function testBoundActiveDemonstrationNotIdentifiable(testCase)
+% Finding 2: when the demonstrations sit on an active control bound (here a
+% pure control-effort objective drives every control to the lower bound), no
+% interior stationarity rows exist. The level must report the objective as not
+% identifiable rather than fitting the true weights through bound rows.
+cfg = defaultInverseLadderConfig();
+cfg.level3.trueWeights = [0; 1; 0; 0];
+warningState = warning("off", "runLevel3InverseOptimalControl:notIdentifiable");
+cleanup = onCleanup(@() warning(warningState));
+result = runLevel3InverseOptimalControl(cfg, cfg.trueParameters);
+verifyFalse(testCase, result.identifiable);
+verifyEqual(testCase, result.interiorRowCount, 0);
+end
+
+function testUnderdeterminedSeparationIsFinite(testCase)
+% Finding 9: a single stationarity row over four weights leaves a
+% three-dimensional null space. The separation diagnostic must be finite (the
+% wide matrix is underdetermined, not perfectly separated) and the objective
+% must be reported as not identifiable.
+cfg = defaultInverseLadderConfig();
+result = inferSimplexWeights([1 -1 0 0], cfg);
+verifyTrue(testCase, isfinite(result.nullspaceSeparation));
+verifyFalse(testCase, result.locallyIdentifiable);
+verifyEqual(testCase, result.nullity, 3);
+verifyEqual(testCase, result.matrixRank, 1);
+end

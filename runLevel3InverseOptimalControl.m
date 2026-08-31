@@ -2,7 +2,6 @@ function result = runLevel3InverseOptimalControl(cfg, parameters)
 %RUNLEVEL3INVERSEOPTIMALCONTROL Infer a centralized community objective.
 
 timeGrid = cfg.control.timeGrid;
-numberOfIntervals = numel(timeGrid) - 1;
 numberOfExperiments = size(cfg.control.initialStates, 1);
 observations = cell(numberOfExperiments, 1);
 demonstrationSuccess = false(numberOfExperiments, 1);
@@ -15,14 +14,16 @@ for experimentIndex = 1:numberOfExperiments
     demonstrationSuccess(experimentIndex) = observations{experimentIndex}.success;
     controls = observations{experimentIndex}.controls;
 
+    % Use only genuinely interior controls. Rows at an active bound do not
+    % satisfy an unconstrained stationarity condition (a bound multiplier
+    % balances the gradient), so including them would misrepresent the KKT
+    % system. Interior rows are pooled across demonstrations and their
+    % combined rank determines identifiability below.
     interior = controls(:) > cfg.control.lowerBound + ...
         cfg.inverse.activeBoundTolerance & ...
         controls(:) < cfg.control.upperBound - ...
         cfg.inverse.activeBoundTolerance;
     variableIndices = find(interior);
-    if numel(variableIndices) < 4
-        variableIndices = (1:2*numberOfIntervals)';
-    end
 
     featureFunction = @(states, candidateControls) ...
         communityCostFeatures(timeGrid, states, candidateControls, parameters);
@@ -71,6 +72,15 @@ result.inverseDiagnostics = inverseResult;
 result.featureNames = cfg.level3.featureNames;
 result.demonstrationSuccess = demonstrationSuccess;
 result.validationSuccess = validationSuccess;
+result.identifiable = inverseResult.locallyIdentifiable;
+result.interiorRowCount = inverseResult.numberOfEquations;
+if ~result.identifiable
+    warning("runLevel3InverseOptimalControl:notIdentifiable", ...
+        "Demonstrations provide insufficient interior information " + ...
+        "(rank %d for %d weights); the reported weights fall back to the " + ...
+        "regularized prior and are not identified by the data.", ...
+        inverseResult.matrixRank, numel(result.trueWeights));
+end
 if allSolvesSucceeded
     result.status = "verified";
 else
