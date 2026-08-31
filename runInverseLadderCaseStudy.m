@@ -19,6 +19,9 @@ rng(cfg.randomSeed, "twister");
 fprintf("Inverse ladder case study\n");
 fprintf("=========================\n");
 
+fprintf("Analysing structural identifiability and observability...\n");
+runLevel1aprioriIdentifiability()
+
 fprintf("Generating calibration experiments...\n");
 experiments = generateCalibrationData(cfg);
 
