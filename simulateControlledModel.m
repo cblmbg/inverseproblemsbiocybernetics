@@ -6,9 +6,9 @@ function states = simulateControlledModel(parameters, initialState, timeGrid, co
 
 arguments
     parameters (1,1) struct
-    initialState (5,1) double
-    timeGrid (1,:) double
-    controls (:,2) double
+    initialState (5,1) double {mustBeFinite}
+    timeGrid (1,:) double {mustBeFinite}
+    controls (:,2) double {mustBeFinite}
     substeps (1,1) double {mustBeInteger,mustBePositive} = 4
 end
 
@@ -40,6 +40,12 @@ for interval = 1:numberOfIntervals
             currentState + step * k3, control, parameters);
         currentState = currentState + step * ...
             (k1 + 2*k2 + 2*k3 + k4) / 6;
+        % Reject a non-finite integration result rather than flooring it to a
+        % plausible value, which would hide upstream numerical failure.
+        if ~all(isfinite(currentState))
+            error("InverseLadder:NonFiniteState", ...
+                "Integration produced a non-finite state.");
+        end
         currentState = max(currentState, 1e-10);
         currentTime = currentTime + step;
     end

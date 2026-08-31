@@ -159,6 +159,31 @@ message is unchanged and now honestly quantified — strain 1 recovers the true
 mechanism, while strain 2 remains structurally ambiguous (a good predictive fit,
 in-sample and held-out, with the wrong term). Levels 1, 3, and 4 are unchanged.
 
-## Stage 4 — Non-finite inputs and simulator contract
+## Stage 4 — Non-finite inputs and simulator contract (findings 6, 7)
 
-_Pending._
+Files: `communityRhs.m`, `simulateControlledModel.m`, `simulateCommunity.m`,
+`testInverseLadderCaseStudy.m`.
+
+What changed:
+- `communityRhs`: clamp genuine out-of-range values without masking non-finite
+  inputs. Negative states and out-of-range controls are still clipped, but a NaN
+  or Inf is left in place so it propagates and can be detected, instead of being
+  silently replaced by 0 (finding 6).
+- `simulateControlledModel`: validate that the initial state, time grid, and
+  controls are finite (`mustBeFinite`), and reject a non-finite integration
+  result rather than flooring it to a plausible value (finding 6).
+- `simulateCommunity`: validate finite inputs, and evaluate the ODE solution at
+  exactly the requested sample times via `deval`, honoring the
+  one-row-per-sample-time contract even for a two-element request (finding 7).
+- Added regression tests `testNonFiniteInputsAreRejected` and
+  `testSimulateCommunityTwoTimeContract`.
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**11/11**.
+
+| Case | Baseline | After Stage 4 |
+|---|---|---|
+| F6 NaN time / NaN control | returned all-finite floored states | rejected with `MATLAB:validators:mustBeFinite` |
+| F6 non-finite integration result | floored to 1e-10 | rejected with `InverseLadder:NonFiniteState` |
+| F7 two requested times | 28×5 (adaptive mesh) | **2×5** (contract honored) |
+| Default workflow (L1–L4) | — | unchanged (L1 0.00572112, L3 0.0157222/verified, L4 verified); simulator-agreement test still passes |

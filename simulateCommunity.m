@@ -6,10 +6,10 @@ function states = simulateCommunity(parameters, initialState, sampleTimes, contr
 
 arguments
     parameters (1,1) struct
-    initialState (5,1) double
-    sampleTimes (1,:) double
-    controlTimes (1,:) double
-    controls (:,2) double
+    initialState (5,1) double {mustBeFinite}
+    sampleTimes (1,:) double {mustBeFinite}
+    controlTimes (1,:) double {mustBeFinite}
+    controls (:,2) double {mustBeFinite}
 end
 
 if size(controls, 1) ~= numel(controlTimes)
@@ -23,7 +23,16 @@ end
 
 rhs = @(t, x) communityRhs(t, x, interpolateControl(t), parameters);
 options = odeset("RelTol", 1e-7, "AbsTol", 1e-9, "NonNegative", 1:5);
-[~, states] = ode15s(rhs, sampleTimes, initialState, options);
+% Evaluate the solution at exactly the requested sample times. Passing the
+% sample times directly to ode15s does not honor the one-row-per-sample-time
+% contract when only two times are requested (the solver then returns its own
+% adaptive mesh), so integrate once over the span and evaluate with deval.
+solution = ode15s(rhs, [sampleTimes(1), sampleTimes(end)], initialState, options);
+states = deval(solution, sampleTimes)';
+if ~all(isfinite(states), "all")
+    error("InverseLadder:NonFiniteState", ...
+        "Integration produced a non-finite state.");
+end
 
     function u = interpolateControl(t)
         u = interp1(controlTimes, controls, t, "linear", "extrap")';

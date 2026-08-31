@@ -117,3 +117,26 @@ end
 verifyEqual(testCase, numel(result.holdoutR2), 2);
 verifyTrue(testCase, all(result.holdoutSampleCount > 0));
 end
+
+function testNonFiniteInputsAreRejected(testCase)
+% Finding 6: non-finite times, controls, or states must be rejected rather than
+% silently clipped to plausible values.
+cfg = defaultInverseLadderConfig();
+p = cfg.trueParameters;
+x0 = cfg.defaultInitialState;
+verifyError(testCase, ...
+    @() simulateControlledModel(p, x0, [0 NaN 2], 0.35*ones(2, 2), 4), ...
+    "MATLAB:validators:mustBeFinite");
+verifyError(testCase, ...
+    @() simulateControlledModel(p, x0, [0 1 2], [NaN 0.35; 0.35 0.35], 4), ...
+    "MATLAB:validators:mustBeFinite");
+end
+
+function testSimulateCommunityTwoTimeContract(testCase)
+% Finding 7: with two requested sample times the adaptive simulator must return
+% one row per requested time, not its internal adaptive mesh.
+cfg = defaultInverseLadderConfig();
+states = simulateCommunity(cfg.trueParameters, cfg.defaultInitialState, ...
+    [0 1], [0 1], 0.35*ones(2, 2));
+verifySize(testCase, states, [2, 5]);
+end
