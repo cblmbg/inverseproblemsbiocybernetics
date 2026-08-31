@@ -32,6 +32,12 @@ solution.features = communityCostFeatures(timeGrid, states, controls, parameters
 solution.objectiveValue = objectiveValue;
 solution.exitFlag = exitFlag;
 solution.output = output;
+% Accept a solve only on a positive exit flag with finite outputs; a
+% non-positive flag means fmincon stopped without a certified local optimum
+% (for example when the iteration budget is exhausted), so the returned
+% controls must not be interpreted as an optimal demonstration.
+solution.success = exitFlag > 0 && all(isfinite(controls), "all") && ...
+    all(isfinite(states), "all");
 
     function value = objective(controlVector)
         candidateControls = reshape(controlVector, numberOfIntervals, 2);

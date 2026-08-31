@@ -37,12 +37,14 @@ fprintf("  derivative-fit R^2: strain 1 %.3f, strain 2 %.3f\n", ...
 
 fprintf("Level 3: inferring a centralized optimality principle...\n");
 level3 = runLevel3InverseOptimalControl(cfg, level1.estimatedParameters);
+fprintf("  status: %s\n", level3.status);
 fprintf("  objective-weight error: %.3g\n", level3.weightError);
 fprintf("  forward control RMSE: %.3g\n", mean(level3.controlRmse));
 
 fprintf("Level 4: inferring player-specific objectives...\n");
 level4 = runLevel4InverseDifferentialGame(cfg, ...
     level1.estimatedParameters);
+fprintf("  status: %s\n", level4.status);
 fprintf("  player weight errors: %.3g, %.3g\n", ...
     level4.weightError(1), level4.weightError(2));
 fprintf("  forward Nash control RMSE: %.3g\n", mean(level4.controlRmse));

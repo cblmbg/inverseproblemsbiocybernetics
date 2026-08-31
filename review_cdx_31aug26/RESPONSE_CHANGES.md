@@ -33,9 +33,39 @@ Defect reproductions at baseline (all confirmed):
 | F8 support metric | zero-noise `supportRecovered=1` with 1 false positive |
 | F9 separation | one-row matrix → rank 1, separation Inf, uniform weights |
 
-## Stage 1 — Solver-success gating and Nash certificate
+## Stage 1 — Solver-success gating and Nash certificate (findings 1, 3)
 
-_Pending._
+Files: `solveOpenLoopNash.m`, `solveCommunityPlanner.m`,
+`runLevel3InverseOptimalControl.m`, `runLevel4InverseDifferentialGame.m`,
+`runInverseLadderCaseStudy.m`, `testInverseLadderCaseStudy.m`.
+
+What changed:
+- `solveOpenLoopNash` now certifies an equilibrium only when the unilateral
+  best-response check passes **and** the certifying re-optimizations succeed with
+  finite outputs. The damped-iterate change (`bestResponseGap`) is retained as a
+  reported diagnostic, not a certificate. New fields: `status`
+  (`verified`/`unverified`), `solverSuccess`, `finalExitFlags`,
+  `innerSolvesSucceeded`. `converged` now equals the repaired certificate.
+- `solveCommunityPlanner` returns `success` (positive exit flag + finite outputs).
+- Levels 3 and 4 record demonstration/validation success and report reproduction
+  RMSEs only when the generating solves succeeded; otherwise RMSEs are `NaN` and
+  `status = "unverified"` (with a warning). The top-level runner prints `status`.
+- Certificate wording states the equilibrium is local and numerical (criterion 2).
+
+Verification (MATLAB R2026a Update 1): Code Analyzer 0 findings; unit tests
+**6/6** (added `testNashCertificateRejectsSmallDamping`,
+`testFailedPlannerSolvesAreUnverified`).
+
+| Case | Baseline | After Stage 1 |
+|---|---|---|
+| Default L3 | weight err 0.0157222, cRMSE 2.89809e-05 | **unchanged**, `status=verified` |
+| Default L4 | weight err 0.0100154 / 0.00107388, cRMSE 0.00136474 | **unchanged**, `status=verified` |
+| F1 damping=0.001 | `converged=1` (false certificate) | `converged=0`, `status=unverified`, max improvement 0.0794 |
+| F3-A planner maxIter=0 | exit 0, control RMSE **exactly 0** reported | `status=unverified`, control RMSE **NaN** |
+| F3-B game maxIter=1 | metrics returned despite `converged=0` | `status=unverified`, control RMSE **NaN**, demos not verified |
+
+No default coefficient, weight, or error metric changed; the only behavioral
+change on default runs is the added, explicit `verified` status.
 
 ## Stage 2 — Bound handling and identifiability diagnostics
 
