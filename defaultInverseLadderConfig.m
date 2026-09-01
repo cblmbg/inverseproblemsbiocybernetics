@@ -70,6 +70,13 @@ cfg.level4.damping = 0.65;
 cfg.inverse.finiteDifferenceStep = 2e-4;
 cfg.inverse.activeBoundTolerance = 5e-3;
 cfg.inverse.regularization = 1e-8;
+% Dimensionless tolerance applied after normalizing each KKT gradient row.
+cfg.inverse.kktGradientTolerance = 1e-3;
+cfg.inverse.kktCompatibilityTolerance = 1e-8;
+cfg.inverse.kktScaleFloor = 1e-12;
+% A normalized objective is data-identifiable only when every weight varies by
+% no more than this amount over the unregularized constrained minimizer set.
+cfg.inverse.weightRangeTolerance = 1e-5;
 
 cfg.optimization.display = "off";
 cfg.optimization.maximumIterations = 100;

@@ -6,6 +6,8 @@ numberOfExperiments = size(cfg.control.initialStates, 1);
 observations = cell(numberOfExperiments, 1);
 demonstrationSuccess = false(numberOfExperiments, 1);
 optimalityMatrix = zeros(0, numel(cfg.level3.trueWeights));
+lowerBoundMatrix = zeros(0, numel(cfg.level3.trueWeights));
+upperBoundMatrix = zeros(0, numel(cfg.level3.trueWeights));
 
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
@@ -19,31 +21,44 @@ for experimentIndex = 1:numberOfExperiments
     end
     controls = observations{experimentIndex}.controls;
 
-    % Use only genuinely interior controls. Rows at an active bound do not
-    % satisfy an unconstrained stationarity condition (a bound multiplier
-    % balances the gradient), so including them would misrepresent the KKT
-    % system. Interior rows are pooled across demonstrations and their
-    % combined rank determines identifiability below.
-    interior = controls(:) > cfg.control.lowerBound + ...
-        cfg.inverse.activeBoundTolerance & ...
-        controls(:) < cfg.control.upperBound - ...
+    % Differentiate every control and classify the reduced-gradient row by its
+    % box activity. Interior rows impose equality stationarity; lower and upper
+    % rows impose the corresponding one-sided KKT signs.
+    lowerActive = controls(:) <= cfg.control.lowerBound + ...
         cfg.inverse.activeBoundTolerance;
-    variableIndices = find(interior);
+    upperActive = controls(:) >= cfg.control.upperBound - ...
+        cfg.inverse.activeBoundTolerance;
+    interior = ~lowerActive & ~upperActive;
+    variableIndices = (1:numel(controls))';
 
     featureFunction = @(states, candidateControls) ...
         communityCostFeatures(timeGrid, states, candidateControls, parameters);
     jacobian = finiteDifferenceFeatureJacobian(parameters, initialState, ...
         timeGrid, controls, variableIndices, featureFunction, cfg);
-    optimalityMatrix = [optimalityMatrix; jacobian]; %#ok<AGROW>
+    optimalityMatrix = [optimalityMatrix; jacobian(interior, :)]; %#ok<AGROW>
+    lowerBoundMatrix = [lowerBoundMatrix; jacobian(lowerActive, :)]; %#ok<AGROW>
+    upperBoundMatrix = [upperBoundMatrix; jacobian(upperActive, :)]; %#ok<AGROW>
 end
 
-inverseResult = inferSimplexWeights(optimalityMatrix, cfg);
+inverseResult = inferSimplexWeights(optimalityMatrix, cfg, ...
+    LowerBoundMatrix=lowerBoundMatrix, UpperBoundMatrix=upperBoundMatrix);
+inverseSucceeded = inverseResult.exitFlag > 0 && ...
+    numel(inverseResult.weights) == numel(cfg.level3.trueWeights) && ...
+    all(isfinite(inverseResult.weights));
+if inverseSucceeded
+    inferredWeights = inverseResult.weights;
+else
+    inferredWeights = nan(size(cfg.level3.trueWeights));
+end
 validation = cell(numberOfExperiments, 1);
 validationSuccess = false(numberOfExperiments, 1);
 controlError = nan(numberOfExperiments, 1);
 stateError = nan(numberOfExperiments, 1);
 
 for experimentIndex = 1:numberOfExperiments
+    if ~inverseSucceeded
+        continue
+    end
     initialState = cfg.control.initialStates(experimentIndex, :)';
     % Cold-start validation from the configured default guess. Reusing the
     % demonstrated controls here would make trajectory reproduction a
@@ -64,34 +79,40 @@ for experimentIndex = 1:numberOfExperiments
     end
 end
 
-allSolvesSucceeded = all(demonstrationSuccess) && all(validationSuccess);
+allChecksSucceeded = all(demonstrationSuccess) && all(validationSuccess) && ...
+    inverseSucceeded && inverseResult.kktCompatible;
 result.trueWeights = cfg.level3.trueWeights;
-result.inferredWeights = inverseResult.weights;
+result.inferredWeights = inferredWeights;
 result.weightError = norm(result.inferredWeights - result.trueWeights);
 result.observations = observations;
 result.validation = validation;
 result.controlRmse = controlError;
 result.stateRmse = stateError;
 result.optimalityMatrix = optimalityMatrix;
+result.lowerBoundMatrix = lowerBoundMatrix;
+result.upperBoundMatrix = upperBoundMatrix;
 result.inverseDiagnostics = inverseResult;
 result.featureNames = cfg.level3.featureNames;
 result.demonstrationSuccess = demonstrationSuccess;
 result.validationSuccess = validationSuccess;
 result.identifiable = inverseResult.locallyIdentifiable;
-result.interiorRowCount = inverseResult.numberOfEquations;
+result.kktCompatible = inverseResult.kktCompatible;
+result.interiorRowCount = inverseResult.interiorRowCount;
+result.lowerActiveRowCount = inverseResult.lowerActiveRowCount;
+result.upperActiveRowCount = inverseResult.upperActiveRowCount;
 if ~result.identifiable
     warning("runLevel3InverseOptimalControl:notIdentifiable", ...
-        "Demonstrations provide insufficient interior information " + ...
-        "(rank %d for %d weights); the reported weights fall back to the " + ...
-        "regularized prior and are not identified by the data.", ...
-        inverseResult.matrixRank, numel(result.trueWeights));
+        "Demonstrations do not uniquely identify a KKT-compatible " + ...
+        "normalized objective (maximum data-only weight range %.3g); " + ...
+        "the reported point estimate depends on the regularized prior.", ...
+        inverseResult.maximumWeightRange);
 end
-if allSolvesSucceeded
+if allChecksSucceeded
     result.status = "verified";
 else
     result.status = "unverified";
     warning("runLevel3InverseOptimalControl:unverified", ...
-        "One or more planner solves did not succeed; the inferred " + ...
-        "objective and reproduction errors are reported as unverified.");
+        "One or more planner solves or inverse-KKT checks did not succeed; " + ...
+        "the inferred objective and reproduction errors are unverified.");
 end
 end

@@ -8,6 +8,8 @@ observations = cell(numberOfExperiments, 1);
 demonstrationVerified = false(numberOfExperiments, 1);
 numberOfFeatures = size(cfg.level4.trueWeights, 1);
 optimalityMatrices = {zeros(0, numberOfFeatures), zeros(0, numberOfFeatures)};
+lowerBoundMatrices = {zeros(0, numberOfFeatures), zeros(0, numberOfFeatures)};
+upperBoundMatrices = {zeros(0, numberOfFeatures), zeros(0, numberOfFeatures)};
 
 for experimentIndex = 1:numberOfExperiments
     initialState = cfg.control.initialStates(experimentIndex, :)';
@@ -24,30 +26,44 @@ for experimentIndex = 1:numberOfExperiments
         controlIndices = (1:numberOfIntervals)' + ...
             (player - 1)*numberOfIntervals;
         playerControls = controls(:, player);
-        % Use only genuinely interior controls; rows at an active bound do not
-        % satisfy an unconstrained stationarity condition. Interior rows are
-        % pooled across demonstrations and their combined rank determines
-        % identifiability below.
-        interior = playerControls > cfg.control.lowerBound + ...
-            cfg.inverse.activeBoundTolerance & ...
-            playerControls < cfg.control.upperBound - ...
+        % Classify every unilateral reduced-gradient row. Interior controls
+        % impose equality stationarity; active bounds contribute KKT signs.
+        lowerActive = playerControls <= cfg.control.lowerBound + ...
             cfg.inverse.activeBoundTolerance;
-        variableIndices = controlIndices(interior);
+        upperActive = playerControls >= cfg.control.upperBound - ...
+            cfg.inverse.activeBoundTolerance;
+        interior = ~lowerActive & ~upperActive;
+        variableIndices = controlIndices;
 
         featureFunction = @(states, candidateControls) ...
             playerCostFeatures(player, timeGrid, states, candidateControls);
         jacobian = finiteDifferenceFeatureJacobian(parameters, initialState, ...
             timeGrid, controls, variableIndices, featureFunction, cfg);
-        optimalityMatrices{player} = [optimalityMatrices{player}; jacobian];
+        optimalityMatrices{player} = [optimalityMatrices{player}; ...
+            jacobian(interior, :)];
+        lowerBoundMatrices{player} = [lowerBoundMatrices{player}; ...
+            jacobian(lowerActive, :)];
+        upperBoundMatrices{player} = [upperBoundMatrices{player}; ...
+            jacobian(upperActive, :)];
     end
 end
 
 inverseDiagnostics = cell(1, 2);
 inferredWeights = zeros(4, 2);
+inverseSucceeded = false(1, 2);
 for player = 1:2
     inverseDiagnostics{player} = inferSimplexWeights( ...
-        optimalityMatrices{player}, cfg);
-    inferredWeights(:, player) = inverseDiagnostics{player}.weights;
+        optimalityMatrices{player}, cfg, ...
+        LowerBoundMatrix=lowerBoundMatrices{player}, ...
+        UpperBoundMatrix=upperBoundMatrices{player});
+    weights = inverseDiagnostics{player}.weights;
+    inverseSucceeded(player) = inverseDiagnostics{player}.exitFlag > 0 && ...
+        numel(weights) == numberOfFeatures && all(isfinite(weights));
+    if inverseSucceeded(player)
+        inferredWeights(:, player) = weights;
+    else
+        inferredWeights(:, player) = nan(numberOfFeatures, 1);
+    end
 end
 
 validation = cell(numberOfExperiments, 1);
@@ -55,6 +71,9 @@ validationVerified = false(numberOfExperiments, 1);
 controlError = nan(numberOfExperiments, 1);
 stateError = nan(numberOfExperiments, 1);
 for experimentIndex = 1:numberOfExperiments
+    if ~all(inverseSucceeded)
+        continue
+    end
     initialState = cfg.control.initialStates(experimentIndex, :)';
     % Cold-start validation from the configured default guess. Reusing the
     % demonstrated controls here would reduce the check to a local
@@ -75,7 +94,9 @@ for experimentIndex = 1:numberOfExperiments
     end
 end
 
-allEquilibriaVerified = all(demonstrationVerified) && all(validationVerified);
+allChecksVerified = all(demonstrationVerified) && all(validationVerified) && ...
+    all(inverseSucceeded) && all([inverseDiagnostics{1}.kktCompatible, ...
+    inverseDiagnostics{2}.kktCompatible]);
 result.trueWeights = cfg.level4.trueWeights;
 result.inferredWeights = inferredWeights;
 result.weightError = vecnorm(inferredWeights - cfg.level4.trueWeights);
@@ -84,26 +105,34 @@ result.validation = validation;
 result.controlRmse = controlError;
 result.stateRmse = stateError;
 result.optimalityMatrices = optimalityMatrices;
+result.lowerBoundMatrices = lowerBoundMatrices;
+result.upperBoundMatrices = upperBoundMatrices;
 result.inverseDiagnostics = inverseDiagnostics;
 result.featureNames = cfg.level4.featureNames;
 result.demonstrationVerified = demonstrationVerified;
 result.validationVerified = validationVerified;
 result.identifiable = [inverseDiagnostics{1}.locallyIdentifiable, ...
     inverseDiagnostics{2}.locallyIdentifiable];
-result.interiorRowCount = [inverseDiagnostics{1}.numberOfEquations, ...
-    inverseDiagnostics{2}.numberOfEquations];
+result.kktCompatible = [inverseDiagnostics{1}.kktCompatible, ...
+    inverseDiagnostics{2}.kktCompatible];
+result.interiorRowCount = [inverseDiagnostics{1}.interiorRowCount, ...
+    inverseDiagnostics{2}.interiorRowCount];
+result.lowerActiveRowCount = [inverseDiagnostics{1}.lowerActiveRowCount, ...
+    inverseDiagnostics{2}.lowerActiveRowCount];
+result.upperActiveRowCount = [inverseDiagnostics{1}.upperActiveRowCount, ...
+    inverseDiagnostics{2}.upperActiveRowCount];
 if ~all(result.identifiable)
     warning("runLevel4InverseDifferentialGame:notIdentifiable", ...
-        "One or more players provide insufficient interior information to " + ...
-        "identify a normalized objective; the reported weights fall back to " + ...
-        "the regularized prior and are not identified by the data.");
+        "One or more players do not uniquely identify a KKT-compatible " + ...
+        "normalized objective; the reported point estimate may depend on " + ...
+        "the regularized prior.");
 end
-if allEquilibriaVerified
+if allChecksVerified
     result.status = "verified";
 else
     result.status = "unverified";
     warning("runLevel4InverseDifferentialGame:unverified", ...
-        "One or more Nash solves were not certified; the inferred " + ...
-        "objectives and reproduction errors are reported as unverified.");
+        "One or more Nash solves or inverse-KKT checks were not certified; " + ...
+        "the inferred objectives and reproduction errors are unverified.");
 end
 end
