@@ -163,9 +163,10 @@ tests passing and no MATLAB Code Analyzer findings.
 
 ## Results summary
 
-The full workflow was executed in MATLAB and produces `inverse_ladder_results.mat`,
-`inverse_ladder_summary.png`, and detailed figures for Levels 1, 3, and 4. The
-synthetic study showed that:
+The full workflow was executed in MATLAB and produces `inverse_ladder_results.mat`
+and `inverse_ladder_summary.png`, a four-panel summary covering all four levels
+(the Level 1 parameter estimates, the Level 2 discovered-coefficient heat map,
+and the Level 3 and Level 4 objective weights). The synthetic study showed that:
 
 - the kinetic parameters can be accurately calibrated under informative
   perturbations;
@@ -186,6 +187,12 @@ manuscript):
   initialization. The realized calibration allocation ranges are
   `u1 ∈ [0.130, 0.730]` and `u2 ∈ [0.150, 0.730]`; the nominal clamp limits are
   never reached.
+- Level 2 selects a sparse growth law by leave-one-experiment-out
+  cross-validation. The in-sample integrated-growth R² is about 0.96 and 0.94
+  for the two strains, and the held-out prediction R² about 0.94 and 0.96.
+  Strain 1 recovers the true Monod terms, while strain 2 selects a spurious
+  allocation term, so exact support recovery is not achieved — a good predictive
+  fit with the wrong mechanism.
 - Level 3 forward validation is cold-started from `u1 = u2 = 0.35`. The two
   validation solves reproduce the demonstrations with control and state RMSEs of
   order `10^-5`, and the inverse-stationarity spectral gap (nullspace-separation
