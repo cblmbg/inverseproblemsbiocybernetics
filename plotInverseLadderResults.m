@@ -16,13 +16,28 @@ legend("True", "Estimated", "Location", "best");
 grid on;
 
 nexttile;
-barh(results.level2.coefficients);
-yticks(1:numel(results.level2.libraryNames));
-yticklabels(results.level2.libraryNames);
-set(gca, "YDir", "reverse");
-xlabel("Coefficient");
-title("Level 2: sparse discovered coefficients");
-legend("Strain 1", "Strain 2", "Location", "southeast");
+% Show recovery accuracy for the terms in the generating growth law, whose
+% analytic library coefficients are mu_max (Monod cross-feeding) and
+% -mu_max .* allocation cost (Monod-by-allocation); all other candidates are
+% zero, so a relative error is only defined for these two terms. A missed term
+% (strain 2 does not recover the interaction) therefore appears as -100%.
+trueParameters = results.configuration.trueParameters;
+libraryNames = results.level2.libraryNames;
+trueCoefficients = zeros(size(results.level2.coefficients));
+trueCoefficients(libraryNames == "Monod cross-feeding", :) = ...
+    trueParameters.maximumGrowthRate';
+trueCoefficients(libraryNames == "Monod x allocation", :) = ...
+    (-trueParameters.maximumGrowthRate .* trueParameters.allocationCost)';
+trueTerm = any(trueCoefficients ~= 0, 2);
+relativeError = 100 * (results.level2.coefficients(trueTerm, :) - ...
+    trueCoefficients(trueTerm, :)) ./ trueCoefficients(trueTerm, :);
+bar(relativeError);
+xticks(1:nnz(trueTerm));
+xticklabels(libraryNames(trueTerm));
+xtickangle(10);
+ylabel("Relative error (%)");
+title("Level 2: growth-law coefficient recovery");
+legend("Strain 1", "Strain 2", "Location", "best");
 grid on;
 
 nexttile;
