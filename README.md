@@ -140,6 +140,13 @@ results = runInverseLadderCaseStudy( ...
     "MakePlots", false, "SaveResults", false);
 ```
 
+Step 1 runs the STRIKE-GOLDD structural analyses and is by far the slowest part
+of the workflow (several minutes). It is performed by
+`runLevel1aprioriIdentifiability`, which restores the caller's session state
+(working directory, path, warnings, and global variables) on return. With
+`SaveResults` false this stage is non-mutating: it leaves the toolbox's results
+folder exactly as found and writes no persistent files.
+
 ## Tests
 
 ```matlab

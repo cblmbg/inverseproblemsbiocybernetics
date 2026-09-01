@@ -1,19 +1,38 @@
 % Inverse Ladder Microbial Community Case Study
 %
 % Main workflow
-%   runInverseLadderCaseStudy          - Execute all four levels.
-%   defaultInverseLadderConfig         - Return parameters and settings.
+%   runInverseLadderCaseStudy          - Execute the full four-level case study.
+%   defaultInverseLadderConfig         - Parameters, experiments, and settings.
+%
+% Structural (a-priori) identifiability
+%   runLevel1aprioriIdentifiability    - Structural identifiability and
+%                                        observability via STRIKE-GOLDD.
 %
 % Model and simulation
-%   communityRhs                       - Cross-feeding ODE right-hand side.
-%   simulateCommunity                  - ODE15S simulation for data fitting.
-%   simulateControlledModel            - Fixed-step RK4 simulation.
+%   communityRhs                       - Cross-feeding community ODE right-hand side.
+%   simulateCommunity                  - Adaptive ode15s simulation (interpolated controls).
+%   simulateControlledModel            - Fixed-step RK4 simulation (piecewise-constant controls).
+%   validateModelParameters            - Reject non-finite kinetic parameter fields.
+%   generateCalibrationData            - Generate noisy, persistently excited experiments.
 %
 % Inverse-problem levels
-%   runLevel1ParameterEstimation       - Calibrate kinetic parameters.
-%   runLevel2ModelDiscovery            - Sparse growth-law discovery.
-%   runLevel3InverseOptimalControl     - Infer a centralized objective.
-%   runLevel4InverseDifferentialGame   - Infer two Nash-player objectives.
+%   runLevel1ParameterEstimation       - Calibrate six kinetic parameters (Level 1).
+%   runLevel2ModelDiscovery            - Sparse growth-law discovery (Level 2).
+%   runLevel3InverseOptimalControl     - Infer a centralized objective (Level 3).
+%   runLevel4InverseDifferentialGame   - Infer two Nash-player objectives (Level 4).
 %
-% Validation
+% Objective inference and forward solvers
+%   communityCostFeatures              - Centralized objective candidate kernels.
+%   playerCostFeatures                 - Player objective candidate kernels.
+%   finiteDifferenceFeatureJacobian    - Finite-difference feature gradients.
+%   inferSimplexWeights                - Recover simplex-normalized objective weights.
+%   solveCommunityPlanner              - Centralized forward optimal-control solver.
+%   solveOpenLoopNash                  - Damped best-response open-loop Nash solver.
+%
+% Plotting and validation
+%   plotInverseLadderResults           - Four-panel summary figure.
 %   testInverseLadderCaseStudy         - MATLAB unit tests.
+%
+% Bundled toolbox
+%   strike-goldd-master                - STRIKE-GOLDD structural-identifiability
+%                                        toolbox used by runLevel1aprioriIdentifiability.
