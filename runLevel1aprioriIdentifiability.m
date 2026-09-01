@@ -4,15 +4,19 @@ function runLevel1aprioriIdentifiability(saveResults)
 %   RUNLEVEL1APRIORIIDENTIFIABILITY() runs the STRIKE-GOLDD toolbox on three
 %   observation configurations of the community model.
 %
-%   RUNLEVEL1APRIORIIDENTIFIABILITY(SAVERESULTS) additionally removes the
-%   result files written by the toolbox when SAVERESULTS is false (default
-%   true).
+%   RUNLEVEL1APRIORIIDENTIFIABILITY(SAVERESULTS) makes the run non-mutating
+%   when SAVERESULTS is false (default true): the toolbox's results folder is
+%   snapshotted beforehand and restored to its exact pre-run contents
+%   afterwards, so no new files persist and no existing (for example same-day)
+%   result file is left overwritten.
 %
 %   The caller's session state -- working directory, search path, warning
-%   state, and global variables -- is restored on return, including after an
-%   error inside the toolbox. This is necessary because STRIKE-GOLDD changes
-%   directory, alters warnings, and runs `clearvars -global`, which would
-%   otherwise erase the caller's unrelated global variables.
+%   state, and global variables -- and, when not saving, the results folder are
+%   restored on any exit, including after an error inside the toolbox. Restore
+%   runs through onCleanup because STRIKE-GOLDD changes directory, alters
+%   warnings, runs `clearvars -global` (which would otherwise erase the
+%   caller's unrelated global variables), and writes result files and
+%   `current_options.m` into its own folder.
 
 arguments
     saveResults (1,1) logical = true
@@ -37,23 +41,26 @@ globalSnapshot = captureGlobalVariables();
 sessionGuard = onCleanup(@() restoreSession(originalDirectory, originalPath, ...
     originalWarningState, globalSnapshot));
 
+% When not saving, snapshot the results folder so the run leaves it exactly as
+% found (existing contents preserved, new files removed). The finalizer runs
+% through onCleanup so it also executes if the toolbox errors part-way, and it
+% always removes a leftover current_options.m (a transient toolbox artifact).
+resultsDirectory = fullfile(strikeDirectory, "results");
+optionsFile = fullfile(strikeDirectory, "current_options.m");
+if saveResults
+    resultsBackup = "";
+else
+    resultsBackup = backupResults(resultsDirectory);
+end
+outputGuard = onCleanup(@() finalizeOutputs(saveResults, resultsDirectory, ...
+    resultsBackup, optionsFile));
+
 addpath(genpath(strikeRoot));
 cd(strikeDirectory);
-
-resultsDirectory = fullfile(strikeDirectory, "results");
-existingResultFiles = resultFileSet(resultsDirectory);
 
 optionFiles = ["options_SIA1.m"; "options_SIA2.m"; "options_SIA3.m"];
 for index = 1:numel(optionFiles)
     STRIKE_GOLDD(optionFiles(index));
-end
-
-if ~saveResults
-    removeNewResultFiles(resultsDirectory, existingResultFiles);
-    leftoverOptions = fullfile(strikeDirectory, "current_options.m");
-    if isfile(leftoverOptions)
-        delete(leftoverOptions);
-    end
 end
 end
 
@@ -92,26 +99,36 @@ eval("global " + string(name) + ";");
 eval(string(name) + " = value;");
 end
 
-function files = resultFileSet(resultsDirectory)
-%RESULTFILESET Names of the .mat result files currently in the results folder.
+function backupPath = backupResults(resultsDirectory)
+%BACKUPRESULTS Copy the results folder to a temporary location for later
+% restoration. Returns "" if the folder does not exist yet.
 if isfolder(resultsDirectory)
-    listing = dir(fullfile(resultsDirectory, "*.mat"));
-    files = string({listing.name});
+    backupPath = string(tempname);
+    copyfile(resultsDirectory, backupPath);
 else
-    files = strings(1, 0);
+    backupPath = "";
 end
 end
 
-function removeNewResultFiles(resultsDirectory, existingResultFiles)
-%REMOVENEWRESULTFILES Delete result files created during this run.
-if ~isfolder(resultsDirectory)
-    return
-end
-listing = dir(fullfile(resultsDirectory, "*.mat"));
-for index = 1:numel(listing)
-    name = string(listing(index).name);
-    if ~ismember(name, existingResultFiles)
-        delete(fullfile(resultsDirectory, listing(index).name));
+function finalizeOutputs(saveResults, resultsDirectory, resultsBackup, optionsFile)
+%FINALIZEOUTPUTS Restore the results folder (when not saving) and remove the
+% transient current_options.m. Safe to call after a partial/failed run.
+if ~saveResults
+    % Reset the results folder to its pre-run state: remove anything the
+    % toolbox wrote, then reinstate any files it overwrote or removed.
+    if isfolder(resultsDirectory)
+        rmdir(resultsDirectory, "s");
     end
+    if strlength(resultsBackup) > 0 && isfolder(resultsBackup)
+        copyfile(resultsBackup, resultsDirectory);
+    end
+end
+if strlength(resultsBackup) > 0 && isfolder(resultsBackup)
+    rmdir(resultsBackup, "s");
+end
+% current_options.m is a transient artifact the toolbox removes only on a
+% successful run; remove it if it was left behind.
+if isfile(optionsFile)
+    delete(optionsFile);
 end
 end
