@@ -213,10 +213,14 @@ manuscript):
   Strain 1 recovers the true Monod terms, while strain 2 selects a spurious
   allocation term, so exact support recovery is not achieved — a good predictive
   fit with the wrong mechanism.
-- Level 3 forward validation is cold-started from `u1 = u2 = 0.35`. The two
-  validation solves reproduce the demonstrations with control and state RMSEs of
-  order `10^-5`, and the inverse-stationarity spectral gap (nullspace-separation
-  ratio ≈ 6×10^2) supports a locally identifiable normalized objective.
+- Level 3 infers the objective from the KKT conditions: interior controls
+  contribute gradient equalities and bound-active controls the corresponding
+  one-sided inequalities (across the two demonstrations, 27 interior, 2 at the
+  lower bound, and 3 at the upper bound). The inferred weights match the true
+  objective to a weight error of about `5×10^-4`, and a data-only weight-range
+  test — not the regularizer — confirms the normalized objective is uniquely
+  identified. Forward validation is cold-started from `u1 = u2 = 0.35` and
+  reproduces the demonstrations with control and state RMSEs of order `10^-5`.
 - Level 4 demonstration and cold-start validation solves satisfy the
   `3×10^-3` best-response tolerance within the 20-iteration cap. Certification
   now *requires* the unilateral-deviation check (each player re-optimized
