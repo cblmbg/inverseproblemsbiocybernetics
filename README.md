@@ -183,10 +183,13 @@ manuscript):
   validation solves reproduce the demonstrations with control and state RMSEs of
   order `10^-5`, and the inverse-stationarity spectral gap (nullspace-separation
   ratio ≈ 6×10^2) supports a locally identifiable normalized objective.
-- Level 4 demonstration and cold-start validation solves both satisfy the
-  primary `3×10^-3` best-response tolerance within the 20-iteration cap and do
-  not depend on the unilateral-improvement fallback; cold-start validation gives
-  mean control and state RMSEs of about `1.4×10^-3` and `2.4×10^-3`.
+- Level 4 demonstration and cold-start validation solves satisfy the
+  `3×10^-3` best-response tolerance within the 20-iteration cap. Certification
+  now *requires* the unilateral-deviation check (each player re-optimized
+  against the same final joint profile) together with successful, feasible
+  solves; the damped-iterate change is retained only as a diagnostic and is no
+  longer sufficient on its own. Cold-start validation gives mean control and
+  state RMSEs of about `1.4×10^-3` and `2.4×10^-3`.
 
 The upper-level demonstrations use two initial states and a 16 h horizon divided
 into eight 2 h control intervals. These are distinct from the three calibration

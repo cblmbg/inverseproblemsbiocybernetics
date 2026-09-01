@@ -20,7 +20,7 @@ fprintf("Inverse ladder case study\n");
 fprintf("=========================\n");
 
 fprintf("Analysing structural identifiability and observability...\n");
-runLevel1aprioriIdentifiability()
+runLevel1aprioriIdentifiability(options.SaveResults);
 
 fprintf("Generating calibration experiments...\n");
 experiments = generateCalibrationData(cfg);
