@@ -16,13 +16,14 @@ legend("True", "Estimated", "Location", "best");
 grid on;
 
 nexttile;
-imagesc(results.level2.coefficients);
-colorbar;
-yticks(1:numel(results.level2.libraryNames));
-yticklabels(results.level2.libraryNames);
-xticks(1:2);
-xticklabels(["Strain 1", "Strain 2"]);
+bar(results.level2.coefficients);
+xticks(1:numel(results.level2.libraryNames));
+xticklabels(results.level2.libraryNames);
+xtickangle(30);
+ylabel("Coefficient");
 title("Level 2: sparse discovered coefficients");
+legend("Strain 1", "Strain 2", "Location", "best");
+grid on;
 
 nexttile;
 bar([results.level3.trueWeights, results.level3.inferredWeights]);
