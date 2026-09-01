@@ -197,14 +197,19 @@ reported 27 of 27 tests passing and no MATLAB Code Analyzer findings.
 
 The full workflow was executed in MATLAB and produces `inverse_ladder_results.mat`
 and `inverse_ladder_summary.png`, a four-panel summary covering all four levels
-(the Level 1 parameter estimates, the Level 2 discovered-coefficient heat map,
-and the Level 3 and Level 4 objective weights). The synthetic study showed that:
+(the Level 1 parameter estimates, the Level 2 growth-law fit as predicted versus
+observed per-capita growth, and the Level 3 and Level 4 objective weights). The
+synthetic study showed that:
 
 - the kinetic parameters can be accurately calibrated under informative
   perturbations;
-- sparse discovery reproduces the observed growth dynamics but exposes a
-  structural ambiguity for one strain (a high predictive fit does not guarantee
-  recovery of the correct mechanism);
+- sparse discovery reproduces the observed growth dynamics well for both strains
+  (the Level 2 panel shows predicted versus observed per-capita growth close to
+  the 1:1 line, with in-sample R^2 about 0.96 and 0.94), yet the discovered law
+  for strain 2 is structurally different from the true model — it omits the
+  Monod-by-allocation interaction and instead selects a spurious allocation
+  term. A good fit to the data therefore does not guarantee recovery of the
+  correct mechanism;
 - the centralized inverse-optimal-control formulation recovers an objective that
   reproduces the observed controls and states from an independent cold-start
   forward solve;

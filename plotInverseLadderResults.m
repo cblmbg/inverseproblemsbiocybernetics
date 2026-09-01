@@ -16,29 +16,32 @@ legend("True", "Estimated", "Location", "best");
 grid on;
 
 nexttile;
-% Show recovery accuracy for the terms in the generating growth law, whose
-% analytic library coefficients are mu_max (Monod cross-feeding) and
-% -mu_max .* allocation cost (Monod-by-allocation); all other candidates are
-% zero, so a relative error is only defined for these two terms. A missed term
-% (strain 2 does not recover the interaction) therefore appears as -100%.
-trueParameters = results.configuration.trueParameters;
-libraryNames = results.level2.libraryNames;
-trueCoefficients = zeros(size(results.level2.coefficients));
-trueCoefficients(libraryNames == "Monod cross-feeding", :) = ...
-    trueParameters.maximumGrowthRate';
-trueCoefficients(libraryNames == "Monod x allocation", :) = ...
-    (-trueParameters.maximumGrowthRate .* trueParameters.allocationCost)';
-trueTerm = any(trueCoefficients ~= 0, 2);
-relativeError = 100 * (results.level2.coefficients(trueTerm, :) - ...
-    trueCoefficients(trueTerm, :)) ./ trueCoefficients(trueTerm, :);
-bar(relativeError);
-xticks(1:nnz(trueTerm));
-xticklabels(libraryNames(trueTerm));
-xtickangle(10);
-ylabel("Relative error (%)");
-title("Level 2: growth-law coefficient recovery");
-legend("Strain 1", "Strain 2", "Location", "best");
+% Fit of the discovered sparse growth law to the data: window-integrated
+% per-capita growth, predicted versus observed. Both strains fall close to the
+% 1:1 line (a good fit); the discussion notes that strain 2 nonetheless recovers
+% a different growth law than the true model.
+hold on;
+strainColors = lines(2);
+observed = results.level2.observedGrowth;
+predicted = results.level2.predictedGrowth;
+scatterHandles = gobjects(1, 2);
+legendText = strings(1, 2);
+for strain = 1:2
+    scatterHandles(strain) = scatter(observed{strain}, predicted{strain}, 14, ...
+        strainColors(strain, :), "filled", "MarkerFaceAlpha", 0.5);
+    legendText(strain) = sprintf("Strain %d (R^2 = %.2f)", strain, ...
+        results.level2.fitR2(strain));
+end
+allValues = [observed{1}; observed{2}; predicted{1}; predicted{2}];
+limits = [min(allValues), max(allValues)];
+plot(limits, limits, "k--");
+axis([limits, limits]);
+xlabel("Observed per-capita growth (h^{-1})");
+ylabel("Predicted");
+title("Level 2: growth-law fit");
+legend(scatterHandles, legendText, "Location", "southeast");
 grid on;
+hold off;
 
 nexttile;
 bar([results.level3.trueWeights, results.level3.inferredWeights]);

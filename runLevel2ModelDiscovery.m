@@ -31,6 +31,8 @@ sampleCount = zeros(1, 2);
 holdoutSampleCount = zeros(1, 2);
 selectedLambda = zeros(1, 2);
 crossValidated = false(1, 2);
+observedGrowth = cell(1, 2);
+predictedGrowth = cell(1, 2);
 
 holdoutExperiments = generateHoldoutExperiments(cfg);
 
@@ -52,6 +54,8 @@ for strain = 1:2
     fitR2(strain) = rSquared(response, prediction);
     sampleCount(strain) = numel(response);
     selectedLambda(strain) = lambdaStar;
+    observedGrowth{strain} = response;
+    predictedGrowth{strain} = prediction;
 
     % Independent-prediction assessment on untouched held-out experiments.
     [holdoutMatrix, holdoutResponse] = assembleDesign(holdoutExperiments, ...
@@ -84,6 +88,8 @@ result.sampleCount = sampleCount;
 result.holdoutSampleCount = holdoutSampleCount;
 result.selectedLambda = selectedLambda;
 result.crossValidated = crossValidated;
+result.observedGrowth = observedGrowth;
+result.predictedGrowth = predictedGrowth;
 result.expectedSupport = expectedSupport;
 result.trueTermsRecovered = trueTermsRecovered;
 result.falsePositiveCount = falsePositiveCount;
