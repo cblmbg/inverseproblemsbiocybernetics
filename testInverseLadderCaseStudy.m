@@ -79,18 +79,24 @@ verifyEqual(testCase, result.interiorRowCount, 0);
 verifyFalse(testCase, result.identifiable);
 end
 
-function testBoundActiveDemonstrationNotIdentifiable(testCase)
-% Finding 2: when the demonstrations sit on an active control bound (here a
-% pure control-effort objective drives every control to the lower bound), no
-% interior stationarity rows exist. The level must report the objective as not
-% identifiable rather than fitting the true weights through bound rows.
+function testBoundActiveDemonstrationUsesKktRows(testCase)
+% Finding 2, complete KKT version: a pure control-effort objective drives all
+% controls to the lower bound. The bound rows must constrain the estimate and
+% certify KKT compatibility, but must not be overclaimed as uniquely identified.
 cfg = defaultInverseLadderConfig();
 cfg.level3.trueWeights = [0; 1; 0; 0];
 warningState = warning("off", "runLevel3InverseOptimalControl:notIdentifiable");
 cleanup = onCleanup(@() warning(warningState));
 result = runLevel3InverseOptimalControl(cfg, cfg.trueParameters);
 verifyFalse(testCase, result.identifiable);
+verifyTrue(testCase, result.kktCompatible);
 verifyEqual(testCase, result.interiorRowCount, 0);
+verifyEqual(testCase, result.lowerActiveRowCount, 32);
+verifyEqual(testCase, result.upperActiveRowCount, 0);
+verifyGreaterThan(testCase, result.inferredWeights(2), 0.95);
+verifyGreaterThan(testCase, ...
+    result.inverseDiagnostics.maximumWeightRange, ...
+    cfg.inverse.weightRangeTolerance);
 end
 
 function testUnderdeterminedSeparationIsFinite(testCase)
@@ -221,13 +227,16 @@ verifyError(testCase, ...
     "InverseLadder:NonFiniteControls");
 end
 
-function testIdentifiabilityFlagIsConservativeAtBoundary(testCase)
-% N2: the augmented-rank flag is a conservative (sufficient, not necessary)
-% criterion. A boundary-unique case (min (w2+w3)^2 on the simplex has the unique
-% minimizer [1;0;0]) is reported as not identifiable; the flag must be false and
-% must not error.
+function testBoundaryIdentifiabilityUsesDataOnlyRanges(testCase)
+% N2 and full KKT follow-up: the equality-only augmented rank is deficient,
+% but the unregularized minimizer set is a singleton on the nonnegative simplex.
+% Data-only weight ranges should detect that uniqueness without relying on the
+% strictly convex prior regularizer.
 cfg = defaultInverseLadderConfig();
 result = inferSimplexWeights([0 1 1], cfg);
 verifyEqual(testCase, result.normalizedRank, 2);
-verifyFalse(testCase, result.locallyIdentifiable);
+verifyTrue(testCase, result.dataIdentifiable);
+verifyTrue(testCase, result.locallyIdentifiable);
+verifyLessThanOrEqual(testCase, result.maximumWeightRange, ...
+    cfg.inverse.weightRangeTolerance);
 end

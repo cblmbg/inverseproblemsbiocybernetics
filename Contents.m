@@ -25,13 +25,14 @@
 %   communityCostFeatures              - Centralized objective candidate kernels.
 %   playerCostFeatures                 - Player objective candidate kernels.
 %   finiteDifferenceFeatureJacobian    - Finite-difference feature gradients.
-%   inferSimplexWeights                - Recover simplex-normalized objective weights.
+%   inferSimplexWeights                - Recover simplex weights with bound-aware KKT constraints.
 %   solveCommunityPlanner              - Centralized forward optimal-control solver.
 %   solveOpenLoopNash                  - Damped best-response open-loop Nash solver.
 %
 % Plotting and validation
 %   plotInverseLadderResults           - Four-panel summary figure.
 %   testInverseLadderCaseStudy         - MATLAB unit tests.
+%   kktBoundHandlingTest               - Bound-aware inverse-KKT unit tests.
 %
 % Bundled toolbox
 %   strike-goldd-master                - STRIKE-GOLDD structural-identifiability

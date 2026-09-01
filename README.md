@@ -111,10 +111,12 @@ by full weak SINDy.
 The Level 3 implementation is not the full bilevel inverse optimal-control
 formulation proposed by Tsiantis, Balsa-Canto, and Banga (2018). It assumes that
 the kinetic model and endogenous demonstrations are already known, replaces the
-inner optimal-control problem by first-order stationarity conditions, and solves
-a constrained linear least-squares problem. Forward re-optimization is then used
-for validation. The report explains the computational advantage and the weaker
-guarantees of this stationarity-based approach.
+inner optimal-control problem by first-order KKT conditions, and solves a
+constrained linear least-squares problem. Interior controls contribute gradient
+equalities, while controls at their lower or upper bounds contribute the
+corresponding one-sided gradient inequalities. Forward re-optimization is then
+used for validation. The report explains the computational advantage and the
+weaker guarantees of this stationarity-based approach.
 
 ## Run the complete case study
 
@@ -166,7 +168,7 @@ toolbox's output according to `SaveResults`:
 ## Tests
 
 ```matlab
-runtests("testInverseLadderCaseStudy.m")
+runtests(["testInverseLadderCaseStudy.m", "kktBoundHandlingTest.m"])
 ```
 
 The tests verify model dimensions and finiteness, nonnegative simulation,
@@ -174,7 +176,9 @@ agreement between the `ode15s` and RK4 simulations, and constrained recovery of
 a known simplex-normalized objective, together with regression tests for the
 solver-success and Nash-feasibility certificates, the objective-identifiability
 diagnostics, non-finite input handling, and the Level 2 support and
-cross-validation metrics. The last MATLAB verification reported 18 of 18 unit
+cross-validation metrics. Dedicated KKT tests verify both bound-gradient signs,
+bound-induced uniqueness, ambiguity that must not be hidden by the regularizer,
+and infeasible inequalities. The last MATLAB verification reported 25 of 25
 tests passing and no MATLAB Code Analyzer findings.
 
 ## Results summary
@@ -256,7 +260,13 @@ those directions violate the observed stationarity conditions. An isolated
 near-zero value supports a locally identifiable normalized objective direction,
 whereas several comparable small values would indicate practical
 non-identifiability. The reported spectral gap is a local diagnostic, not a
-global proof of identifiability.
+global proof of identifiability. Bound-active demonstrations are retained through
+the reduced-gradient KKT signs rather than discarded. The reported point estimate
+uses a tiny uniform-weight regularizer, but the identifiability flag does not:
+it solves the unregularized constrained least-squares problem and bounds every
+weight over its complete minimizer set. Only a numerically singleton set is
+reported as data-identifiable; KKT compatibility and identifiability are exposed
+as separate diagnostics.
 
 ## Technical report and manuscript
 
