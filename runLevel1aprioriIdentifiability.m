@@ -4,11 +4,15 @@ function runLevel1aprioriIdentifiability(saveResults)
 %   RUNLEVEL1APRIORIIDENTIFIABILITY() runs the STRIKE-GOLDD toolbox on three
 %   observation configurations of the community model.
 %
-%   RUNLEVEL1APRIORIIDENTIFIABILITY(SAVERESULTS) makes the run non-mutating
-%   when SAVERESULTS is false (default true): the toolbox's results folder is
-%   snapshotted beforehand and restored to its exact pre-run contents
-%   afterwards, so no new files persist and no existing (for example same-day)
-%   result file is left overwritten.
+%   RUNLEVEL1APRIORIIDENTIFIABILITY(SAVERESULTS) controls how the toolbox's
+%   result files are handled (default SAVERESULTS = true):
+%     * true  -- this run's result files are archived into a per-run
+%                timestamped subfolder (results/run_YYYYMMDD_HHMMSS), so
+%                same-day runs do not overwrite one another; any pre-existing
+%                result file the toolbox overwrote is restored.
+%     * false -- the run is non-mutating: the results folder is snapshotted
+%                beforehand and restored to its exact pre-run contents, so no
+%                new files persist and no existing file is left overwritten.
 %
 %   The caller's session state -- working directory, search path, warning
 %   state, and global variables -- and, when not saving, the results folder are
@@ -41,19 +45,24 @@ globalSnapshot = captureGlobalVariables();
 sessionGuard = onCleanup(@() restoreSession(originalDirectory, originalPath, ...
     originalWarningState, globalSnapshot));
 
-% When not saving, snapshot the results folder so the run leaves it exactly as
-% found (existing contents preserved, new files removed). The finalizer runs
-% through onCleanup so it also executes if the toolbox errors part-way, and it
-% always removes a leftover current_options.m (a transient toolbox artifact).
+% Snapshot the results folder before the run. When not saving, it is restored
+% verbatim (existing contents preserved, new files removed). When saving, this
+% run's outputs are archived into a per-run timestamped subfolder so same-day
+% runs do not overwrite one another, and any pre-existing result file the
+% toolbox overwrote is restored from the snapshot. The finalizer runs through
+% onCleanup so it also executes if the toolbox errors part-way, and it always
+% removes a leftover current_options.m (a transient toolbox artifact).
 resultsDirectory = fullfile(strikeDirectory, "results");
 optionsFile = fullfile(strikeDirectory, "current_options.m");
+resultsBackup = backupResults(resultsDirectory);
 if saveResults
-    resultsBackup = "";
+    runFolder = fullfile(resultsDirectory, ...
+        "run_" + string(datetime("now"), "yyyyMMdd_HHmmss"));
 else
-    resultsBackup = backupResults(resultsDirectory);
+    runFolder = "";
 end
 outputGuard = onCleanup(@() finalizeOutputs(saveResults, resultsDirectory, ...
-    resultsBackup, optionsFile));
+    resultsBackup, runFolder, optionsFile));
 
 addpath(genpath(strikeRoot));
 cd(strikeDirectory);
@@ -110,18 +119,14 @@ else
 end
 end
 
-function finalizeOutputs(saveResults, resultsDirectory, resultsBackup, optionsFile)
-%FINALIZEOUTPUTS Restore the results folder (when not saving) and remove the
-% transient current_options.m. Safe to call after a partial/failed run.
-if ~saveResults
-    % Reset the results folder to its pre-run state: remove anything the
-    % toolbox wrote, then reinstate any files it overwrote or removed.
-    if isfolder(resultsDirectory)
-        rmdir(resultsDirectory, "s");
-    end
-    if strlength(resultsBackup) > 0 && isfolder(resultsBackup)
-        copyfile(resultsBackup, resultsDirectory);
-    end
+function finalizeOutputs(saveResults, resultsDirectory, resultsBackup, ...
+    runFolder, optionsFile)
+%FINALIZEOUTPUTS Archive (when saving) or discard (when not) the toolbox
+% outputs and remove the transient current_options.m. Safe after a failed run.
+if saveResults
+    archiveRunResults(resultsDirectory, resultsBackup, runFolder);
+else
+    restoreResults(resultsDirectory, resultsBackup);
 end
 if strlength(resultsBackup) > 0 && isfolder(resultsBackup)
     rmdir(resultsBackup, "s");
@@ -131,4 +136,60 @@ end
 if isfile(optionsFile)
     delete(optionsFile);
 end
+end
+
+function restoreResults(resultsDirectory, resultsBackup)
+%RESTORERESULTS Reset the results folder to its pre-run contents.
+if isfolder(resultsDirectory)
+    rmdir(resultsDirectory, "s");
+end
+if strlength(resultsBackup) > 0 && isfolder(resultsBackup)
+    copyfile(resultsBackup, resultsDirectory);
+end
+end
+
+function archiveRunResults(resultsDirectory, resultsBackup, runFolder)
+%ARCHIVERUNRESULTS Move this run's result files into a per-run subfolder and
+% reinstate any pre-existing file that the toolbox overwrote.
+hasBackup = strlength(resultsBackup) > 0 && isfolder(resultsBackup);
+listing = dir(fullfile(resultsDirectory, "*.mat"));
+for index = 1:numel(listing)
+    name = listing(index).name;
+    source = fullfile(resultsDirectory, name);
+    backupFile = fullfile(resultsBackup, name);
+    isNew = ~hasBackup || ~isfile(backupFile);
+    if isNew || ~filesAreEqual(source, backupFile)
+        if ~isfolder(runFolder)
+            mkdir(runFolder);
+        end
+        movefile(source, fullfile(runFolder, name));
+    end
+end
+if hasBackup
+    backupListing = dir(fullfile(resultsBackup, "*.mat"));
+    for index = 1:numel(backupListing)
+        name = backupListing(index).name;
+        destination = fullfile(resultsDirectory, name);
+        if ~isfile(destination)
+            copyfile(fullfile(resultsBackup, name), destination);
+        end
+    end
+end
+end
+
+function tf = filesAreEqual(fileA, fileB)
+%FILESAREEQUAL True if two files exist with identical byte contents.
+infoA = dir(fileA);
+infoB = dir(fileB);
+if isempty(infoA) || isempty(infoB) || infoA.bytes ~= infoB.bytes
+    tf = false;
+    return
+end
+idA = fopen(fileA, "r");
+bytesA = fread(idA);
+fclose(idA);
+idB = fopen(fileB, "r");
+bytesB = fread(idB);
+fclose(idB);
+tf = isequal(bytesA, bytesB);
 end

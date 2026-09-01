@@ -140,12 +140,28 @@ results = runInverseLadderCaseStudy( ...
     "MakePlots", false, "SaveResults", false);
 ```
 
+### Structural identifiability stage
+
 Step 1 runs the STRIKE-GOLDD structural analyses and is by far the slowest part
 of the workflow (several minutes). It is performed by
 `runLevel1aprioriIdentifiability`, which restores the caller's session state
-(working directory, path, warnings, and global variables) on return. With
-`SaveResults` false this stage is non-mutating: it leaves the toolbox's results
-folder exactly as found and writes no persistent files.
+(working directory, path, warnings, and global variables) on return, including
+after an error inside the toolbox.
+
+STRIKE-GOLDD names its result files by model and calendar day, so repeated runs
+on the same day would otherwise overwrite one another. The wrapper handles the
+toolbox's output according to `SaveResults`:
+
+- **`SaveResults` true** — each run's result files are archived into a per-run
+  timestamped subfolder,
+  `strike-goldd-master/STRIKE-GOLDD/results/run_YYYYMMDD_HHMMSS/`, so same-day
+  runs are kept separately and never overwrite one another. If the toolbox
+  overwrites a pre-existing result file, that file's original contents are
+  restored (the new version is kept in the run subfolder). The transient
+  `current_options.m` is removed.
+- **`SaveResults` false** — the stage is non-mutating: the results folder is
+  snapshotted beforehand and restored to its exact pre-run contents, so no new
+  files persist and no existing file is left overwritten.
 
 ## Tests
 
