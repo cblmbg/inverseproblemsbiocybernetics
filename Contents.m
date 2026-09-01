@@ -5,8 +5,10 @@
 %   defaultInverseLadderConfig         - Parameters, experiments, and settings.
 %
 % Structural (a-priori) identifiability
-%   runLevel1aprioriIdentifiability    - Structural identifiability and
-%                                        observability via STRIKE-GOLDD.
+%   runLevel1aprioriIdentifiability    - Full-state structural analysis used by Level 1.
+%   runStructuralIdentifiabilityComparison
+%                                      - Compare all three observation scenarios.
+%   runStrikeGolddAnalyses             - Protected shared STRIKE-GOLDD runner.
 %
 % Model and simulation
 %   communityRhs                       - Cross-feeding community ODE right-hand side.
@@ -33,7 +35,8 @@
 %   plotInverseLadderResults           - Four-panel summary figure.
 %   testInverseLadderCaseStudy         - MATLAB unit tests.
 %   kktBoundHandlingTest               - Bound-aware inverse-KKT unit tests.
+%   structuralIdentifiabilityTest      - Shared structural-runner API tests.
 %
 % Bundled toolbox
 %   strike-goldd-master                - STRIKE-GOLDD structural-identifiability
-%                                        toolbox used by runLevel1aprioriIdentifiability.
+%                                        toolbox used by the structural-analysis functions.

@@ -19,7 +19,7 @@ rng(cfg.randomSeed, "twister");
 fprintf("Inverse ladder case study\n");
 fprintf("=========================\n");
 
-fprintf("Analysing structural identifiability and observability...\n");
+fprintf("Analysing full-state structural identifiability and observability...\n");
 runLevel1aprioriIdentifiability(options.SaveResults);
 
 fprintf("Generating calibration experiments...\n");

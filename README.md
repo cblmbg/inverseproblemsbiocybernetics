@@ -126,7 +126,7 @@ results = runInverseLadderCaseStudy;
 
 This command:
 
-1. analyses the structural local identifiability and observability of several model variants;
+1. analyses structural local identifiability and observability for the full-state observation setting;
 2. generates noisy synthetic experiments;
 3. estimates six kinetic parameters;
 4. discovers a sparse biomass growth law;
@@ -144,14 +144,24 @@ results = runInverseLadderCaseStudy( ...
 
 ### Structural identifiability stage
 
-Step 1 runs the STRIKE-GOLDD structural analyses and is by far the slowest part
-of the workflow (several minutes). It is performed by
-`runLevel1aprioriIdentifiability`, which restores the caller's session state
-(working directory, path, warnings, and global variables) on return, including
-after an error inside the toolbox.
+Step 1 runs the STRIKE-GOLDD full-state structural analysis and is the slowest
+part of the normal workflow (roughly three minutes on the reference machine).
+It is performed by `runLevel1aprioriIdentifiability` and matches the full-state
+observation setting used by the subsequent parameter-estimation stage.
+
+The broader comparison of all three observation scenarios remains available as
+an optional, longer analysis (roughly nine minutes on the reference machine):
+
+```matlab
+runStructuralIdentifiabilityComparison;
+```
+
+Both entry points use `runStrikeGolddAnalyses`, which restores the caller's
+session state (working directory, path, warnings, and global variables) on
+return, including after an error inside the toolbox.
 
 STRIKE-GOLDD names its result files by model and calendar day, so repeated runs
-on the same day would otherwise overwrite one another. The wrapper handles the
+on the same day would otherwise overwrite one another. The shared runner handles the
 toolbox's output according to `SaveResults`:
 
 - **`SaveResults` true** — each run's result files are archived into a per-run
@@ -168,7 +178,8 @@ toolbox's output according to `SaveResults`:
 ## Tests
 
 ```matlab
-runtests(["testInverseLadderCaseStudy.m", "kktBoundHandlingTest.m"])
+runtests(["testInverseLadderCaseStudy.m", "kktBoundHandlingTest.m", ...
+    "structuralIdentifiabilityTest.m"])
 ```
 
 The tests verify model dimensions and finiteness, nonnegative simulation,
@@ -178,8 +189,9 @@ solver-success and Nash-feasibility certificates, the objective-identifiability
 diagnostics, non-finite input handling, and the Level 2 support and
 cross-validation metrics. Dedicated KKT tests verify both bound-gradient signs,
 bound-induced uniqueness, ambiguity that must not be hidden by the regularizer,
-and infeasible inequalities. The last MATLAB verification reported 25 of 25
-tests passing and no MATLAB Code Analyzer findings.
+and infeasible inequalities. Fast structural-runner tests cover invalid option
+lists without executing the long symbolic analyses. The last MATLAB verification
+reported 27 of 27 tests passing and no MATLAB Code Analyzer findings.
 
 ## Results summary
 
@@ -248,9 +260,10 @@ states, also assesses observability of the unmeasured states.
   metabolites `M1 + M2`; measuring only a single strain instead of the sum makes
   some parameters unidentifiable (the structural identifiability limit). To stay
   well away from this limit, the case study assumes full-state measurement and
-  focuses on six of the parameters. These structural results are reproduced in
-  code by `runLevel1aprioriIdentifiability`, which runs the STRIKE-GOLDD toolbox
-  on the three observation configurations at the start of the workflow.
+  focuses on six of the parameters. The normal workflow reproduces the
+  full-state result through `runLevel1aprioriIdentifiability`; the optional
+  `runStructuralIdentifiabilityComparison` function runs all three observation
+  configurations and reproduces the measurement-comparison claims.
 - **Practical identifiability.** With the baseline noise level (0.5% of the
   maximum state scale) the RMS relative parameter error is about 0.57%.
   Increasing the Gaussian noise to 5%, 10%, and 20% raises the error to roughly
