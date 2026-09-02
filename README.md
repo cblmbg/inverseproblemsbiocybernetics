@@ -120,10 +120,10 @@ weaker guarantees of this stationarity-based approach.
 
 ## Manuscript pseudocode correspondence
 
-Each level's `runLevel*` function begins with a short algorithm outline that
-mirrors the corresponding compact pseudocode in the accompanying manuscript. The
-pseudocode is a high-level description; the functions are the authoritative
-implementation.
+Each of the four inference-level runners in the table begins with a short
+algorithm outline that mirrors the corresponding compact pseudocode in the
+accompanying manuscript. The pseudocode is a high-level description; the
+functions are the authoritative implementation.
 
 | Manuscript pseudocode | Implementation |
 |---|---|

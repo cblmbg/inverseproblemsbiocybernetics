@@ -17,10 +17,11 @@ function result = runLevel2ModelDiscovery(cfg, experiments, estimatedParameters)
 %
 % Algorithm outline (mirrors the Level 2 pseudocode in the accompanying
 % manuscript, "Level 2: model discovery"):
-%   1. for each strain, build window-integrated per-capita growth and averaged
-%      library rows from the smoothed trajectories;
-%   2. select the LASSO penalty by leave-one-experiment-out cross-validation and
-%      threshold small coefficients;
+%   1. for each strain, build window-integrated per-capita growth and
+%      averaged library rows from smoothed states and left-held controls;
+%   2. with at least two experiment groups, select the LASSO penalty by
+%      leave-one-experiment-out cross-validation; otherwise use a fixed
+%      fallback, then threshold small coefficients;
 %   3. report in-sample and held-out fit and compare the selected support with
 %      the expected support.
 

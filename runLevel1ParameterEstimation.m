@@ -8,9 +8,9 @@ function result = runLevel1ParameterEstimation(cfg, experiments)
 % Algorithm outline (mirrors the Level 1 pseudocode in the accompanying
 % manuscript, "Level 1: parameter estimation"):
 %   1. from each truth-independent initial guess, solve a bound-constrained
-%      weighted least-squares fit with lsqnonlin, simulating every candidate
+%      weighted least-squares fit with lsqnonlin, simulating each candidate
 %      parameter vector under the prescribed allocation schedules;
-%   2. keep the estimate with the smallest residual norm.
+%   2. keep the estimate with the smallest sum of squared residuals.
 
 lowerBounds = [0.20; 0.20; 0.20; 0.20; 0.05; 0.05];
 upperBounds = [0.90; 0.90; 0.90; 0.90; 0.70; 0.70];

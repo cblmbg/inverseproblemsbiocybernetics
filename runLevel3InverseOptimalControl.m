@@ -3,11 +3,14 @@ function result = runLevel3InverseOptimalControl(cfg, parameters)
 %
 % Algorithm outline (mirrors the Level 3 pseudocode in the accompanying
 % manuscript, "Inverse stationarity formulation"):
-%   1. solve the two centralized-planner demonstrations;
-%   2. finite-difference the objective features and classify each control row as
-%      interior (gradient equality) or lower/upper bound-active (one-sided KKT);
-%   3. recover the simplex weights with inferSimplexWeights (bound-aware KKT);
-%   4. cold-start forward validation from u = 0.35.
+%   1. solve configured centralized-planner demonstrations and retain only
+%      successful solves;
+%   2. finite-difference features for retained demonstrations. Classify each
+%      control row as interior (gradient equality) or bound-active
+%      (one-sided KKT);
+%   3. recover simplex weights with inferSimplexWeights using bound-aware KKT;
+%   4. cold-start validation from the configured initial control (0.35 in the
+%      supplied configuration).
 
 timeGrid = cfg.control.timeGrid;
 numberOfExperiments = size(cfg.control.initialStates, 1);
