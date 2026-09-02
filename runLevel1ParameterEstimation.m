@@ -4,6 +4,13 @@ function result = runLevel1ParameterEstimation(cfg, experiments)
 % Estimated quantities are the two maximum growth rates, two secretion
 % rates, and two allocation-cost coefficients. Remaining parameters are
 % treated as independently known.
+%
+% Algorithm outline (mirrors the Level 1 pseudocode in the accompanying
+% manuscript, "Level 1: parameter estimation"):
+%   1. from each truth-independent initial guess, solve a bound-constrained
+%      weighted least-squares fit with lsqnonlin, simulating every candidate
+%      parameter vector under the prescribed allocation schedules;
+%   2. keep the estimate with the smallest residual norm.
 
 lowerBounds = [0.20; 0.20; 0.20; 0.20; 0.05; 0.05];
 upperBounds = [0.90; 0.90; 0.90; 0.90; 0.70; 0.70];

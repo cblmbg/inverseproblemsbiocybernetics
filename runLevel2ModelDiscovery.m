@@ -14,6 +14,15 @@ function result = runLevel2ModelDiscovery(cfg, experiments, estimatedParameters)
 %     per-experiment smoothing does not leak between folds;
 %   * generalization is assessed on separate held-out experiments, distinct from
 %     the fitting data used to select the penalty.
+%
+% Algorithm outline (mirrors the Level 2 pseudocode in the accompanying
+% manuscript, "Level 2: model discovery"):
+%   1. for each strain, build window-integrated per-capita growth and averaged
+%      library rows from the smoothed trajectories;
+%   2. select the LASSO penalty by leave-one-experiment-out cross-validation and
+%      threshold small coefficients;
+%   3. report in-sample and held-out fit and compare the selected support with
+%      the expected support.
 
 libraryNames = ["Monod cross-feeding"; "Monod x allocation"; ...
     "Strain 1 abundance"; "Strain 2 abundance"; "Substrate"; ...

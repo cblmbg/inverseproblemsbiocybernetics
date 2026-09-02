@@ -1,5 +1,13 @@
 function result = runLevel4InverseDifferentialGame(cfg, parameters)
 %RUNLEVEL4INVERSEDIFFERENTIALGAME Infer objectives of two microbial players.
+%
+% Algorithm outline (mirrors the Level 4 pseudocode in the accompanying
+% manuscript, "Forward and inverse algorithms"):
+%   1. solve the two open-loop Nash demonstrations by damped best response;
+%   2. for each player, finite-difference its own-control features and classify
+%      rows as interior (gradient equality) or bound-active (one-sided KKT);
+%   3. recover each player's simplex weights with inferSimplexWeights;
+%   4. cold-start Nash validation from u = 0.35 and check unilateral deviations.
 
 timeGrid = cfg.control.timeGrid;
 numberOfIntervals = numel(timeGrid) - 1;

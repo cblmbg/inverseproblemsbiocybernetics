@@ -1,5 +1,13 @@
 function result = runLevel3InverseOptimalControl(cfg, parameters)
 %RUNLEVEL3INVERSEOPTIMALCONTROL Infer a centralized community objective.
+%
+% Algorithm outline (mirrors the Level 3 pseudocode in the accompanying
+% manuscript, "Inverse stationarity formulation"):
+%   1. solve the two centralized-planner demonstrations;
+%   2. finite-difference the objective features and classify each control row as
+%      interior (gradient equality) or lower/upper bound-active (one-sided KKT);
+%   3. recover the simplex weights with inferSimplexWeights (bound-aware KKT);
+%   4. cold-start forward validation from u = 0.35.
 
 timeGrid = cfg.control.timeGrid;
 numberOfExperiments = size(cfg.control.initialStates, 1);

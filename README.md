@@ -118,6 +118,20 @@ corresponding one-sided gradient inequalities. Forward re-optimization is then
 used for validation. The report explains the computational advantage and the
 weaker guarantees of this stationarity-based approach.
 
+## Manuscript pseudocode correspondence
+
+Each level's `runLevel*` function begins with a short algorithm outline that
+mirrors the corresponding compact pseudocode in the accompanying manuscript. The
+pseudocode is a high-level description; the functions are the authoritative
+implementation.
+
+| Manuscript pseudocode | Implementation |
+|---|---|
+| Level 1 — parameter estimation | `runLevel1ParameterEstimation.m` |
+| Level 2 — model discovery | `runLevel2ModelDiscovery.m` |
+| Level 3 — inverse stationarity formulation | `runLevel3InverseOptimalControl.m` (inverse solved by `inferSimplexWeights.m`) |
+| Level 4 — forward and inverse algorithms | `runLevel4InverseDifferentialGame.m` (game by `solveOpenLoopNash.m`, inverse by `inferSimplexWeights.m`) |
+
 ## Run the complete case study
 
 ```matlab
