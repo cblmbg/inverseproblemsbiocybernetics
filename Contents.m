@@ -33,6 +33,7 @@
 %
 % Plotting and validation
 %   plotInverseLadderResults           - Four-panel summary figure.
+%   generateReportFigures              - Detailed Level 1/3/4 figures from saved results.
 %   testInverseLadderCaseStudy         - MATLAB unit tests.
 %   kktBoundHandlingTest               - Bound-aware inverse-KKT unit tests.
 %   structuralIdentifiabilityTest      - Shared structural-runner API tests.

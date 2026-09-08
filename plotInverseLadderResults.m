@@ -54,11 +54,24 @@ legend("True", "Inferred", "Location", "best");
 grid on;
 
 nexttile;
+% Color encodes true vs inferred (blue/orange, matching Levels 1 and 3);
+% opacity encodes the player (solid = Player 1, translucent = Player 2).
+trueColor = [0 0.4470 0.7410];          % blue   = true
+inferredColor = [0.8500 0.3250 0.0980]; % orange = inferred
 playerLabels = ["P1 true", "P1 inferred", "P2 true", "P2 inferred"];
-bar([results.level4.trueWeights(:, 1), ...
+level4Weights = [results.level4.trueWeights(:, 1), ...
     results.level4.inferredWeights(:, 1), ...
     results.level4.trueWeights(:, 2), ...
-    results.level4.inferredWeights(:, 2)]);
+    results.level4.inferredWeights(:, 2)];
+barHandles = bar(level4Weights);
+faceColors = {trueColor, inferredColor, trueColor, inferredColor};
+faceAlphas = [1, 1, 0.4, 0.4];
+for seriesIndex = 1:numel(barHandles)
+    barHandles(seriesIndex).FaceColor = faceColors{seriesIndex};
+    barHandles(seriesIndex).FaceAlpha = faceAlphas(seriesIndex);
+    barHandles(seriesIndex).EdgeColor = [0.25 0.25 0.25];
+    barHandles(seriesIndex).LineWidth = 0.4;
+end
 xticks(1:numel(results.level4.featureNames));
 xticklabels(results.level4.featureNames);
 xtickangle(30);
