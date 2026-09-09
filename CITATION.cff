@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Inverse Ladder Microbial Community Case Study: MATLAB implementation of a four-level inverse-problem hierarchy"
+abstract: >-
+  Reproducible MATLAB implementation of a four-level hierarchy of inverse
+  problems (parameter estimation, sparse model discovery, inverse optimal
+  control, and inverse differential games) applied to a synthetic two-strain
+  cross-feeding microbial consortium. Accompanies the paper "A Hierarchical
+  Framework for Inverse Problems in Biological Cybernetics: Opportunities and
+  Limitations".
+type: software
+version: 1.0.1
+date-released: "2026-09-09"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/cblmbg/inverseproblemsbiocybernetics"
+url: "https://github.com/cblmbg/inverseproblemsbiocybernetics"
+authors:
+  - family-names: Banga
+    given-names: "Julio R."
+    orcid: "https://orcid.org/0000-0002-4245-0320"
+    affiliation: "Computational Biology Lab, MBG-CSIC, Pontevedra, Spain"
+  - family-names: Villaverde
+    given-names: "Alejandro F."
+    orcid: "https://orcid.org/0000-0001-7401-7380"
+    affiliation: "Universidade de Vigo, Vigo, Spain; CITMAga, Santiago de Compostela, Spain"
+keywords:
+  - inverse problems
+  - systems biology
+  - biological cybernetics
+  - parameter estimation
+  - model discovery
+  - inverse optimal control
+  - inverse differential games
+  - identifiability
+  - microbial communities
+  - MATLAB
+# Once the article is published, add journal, volume, and doi below.
+preferred-citation:
+  type: article
+  title: "A Hierarchical Framework for Inverse Problems in Biological Cybernetics: Opportunities and Limitations"
+  year: 2026
+  authors:
+    - family-names: Banga
+      given-names: "Julio R."
+      orcid: "https://orcid.org/0000-0002-4245-0320"
+    - family-names: Villaverde
+      given-names: "Alejandro F."
+      orcid: "https://orcid.org/0000-0001-7401-7380"
