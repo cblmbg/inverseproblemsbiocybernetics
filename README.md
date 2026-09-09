@@ -335,3 +335,8 @@ because objective recovery is generally non-unique.
 ## AI assistance
 
 Claude (Anthropic) was used for code analysis and refactoring.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+See the [LICENSE](LICENSE) file for the full text.
