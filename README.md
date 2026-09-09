@@ -320,3 +320,18 @@ strain as an independent player. Both levels use normalized candidate cost
 kernels, inverse first-order optimality conditions, and forward validation. The
 implementation intentionally exposes rank diagnostics and prediction errors
 because objective recovery is generally non-unique.
+
+## Authors
+
+- **Julio R. Banga** — Computational Biology Lab, MBG-CSIC, Pontevedra, Galicia,
+  Spain. ORCID [0000-0002-4245-0320](https://orcid.org/0000-0002-4245-0320).
+  Email: <j.r.banga@csic.es>
+- **Alejandro F. Villaverde** — Department of Systems Engineering and Control,
+  Universidade de Vigo, Vigo, Galicia, Spain; and CITMAga, Galician Centre for
+  Mathematical Research and Technology, Santiago de Compostela, Galicia, Spain.
+  ORCID [0000-0001-7401-7380](https://orcid.org/0000-0001-7401-7380).
+  Email: <afvillaverde@uvigo.gal>
+
+## AI assistance
+
+Claude (Anthropic) was used for code analysis and refactoring.
