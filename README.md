@@ -4,7 +4,7 @@ This repository contains a reproducible MATLAB implementation of the four-level
 inverse-problem hierarchy described in the accompanying manuscript:
 
 Banga, Julio R. and Alejandro F.Villaverde (2026) A Hierarchical Framework for 
-Inverse Problems in Biological Cybernetics: Opportunities and Limitations.  arXiv:2609.8057157
+Inverse Problems in Biological Cybernetics: Opportunities and Limitations. *preprint link pending*
 
 The goal is to illustrate all four levels of the inverse-problem ladder with a
 single biological system, together with a complete MATLAB implementation.
